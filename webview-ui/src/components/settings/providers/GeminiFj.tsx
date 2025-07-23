@@ -21,13 +21,7 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 		!!apiConfiguration?.googleGeminiBaseUrl,
 	)
 	const [customEndpointSelected, setCustomEndpointSelected] = useState(!!apiConfiguration?.geminiFjCustomEndpoint)
-	const [advancedOptionsSelected, setAdvancedOptionsSelected] = useState(
-		!!(
-			apiConfiguration?.geminiFjMaxRetries ||
-			apiConfiguration?.geminiFjRequestTimeout ||
-			apiConfiguration?.geminiFjUseStreaming !== undefined
-		),
-	)
+	// Advanced options are always visible now
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -119,60 +113,45 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 				)}
 			</div>
 
-			{/* Advanced Options */}
+			{/* Advanced Options - Always Visible */}
 			<div>
-				<Checkbox
-					checked={advancedOptionsSelected}
-					onChange={(checked: boolean) => {
-						setAdvancedOptionsSelected(checked)
-						if (!checked) {
-							setApiConfigurationField("geminiFjMaxRetries", undefined)
-							setApiConfigurationField("geminiFjRequestTimeout", undefined)
-							setApiConfigurationField("geminiFjUseStreaming", undefined)
-						}
-					}}>
-					Advanced Options
-				</Checkbox>
-				{advancedOptionsSelected && (
-					<>
-						<VSCodeTextField
-							value={apiConfiguration?.geminiFjMaxRetries?.toString() || ""}
-							onInput={handleInputChange("geminiFjMaxRetries", (e: any) => {
-								const value = parseInt(e.target.value)
-								return isNaN(value) ? undefined : value
-							})}
-							placeholder="3"
-							className="w-full mt-1">
-							<label className="block font-medium mb-1">Max Retries</label>
-						</VSCodeTextField>
-						<VSCodeTextField
-							value={apiConfiguration?.geminiFjRequestTimeout?.toString() || ""}
-							onInput={handleInputChange("geminiFjRequestTimeout", (e: any) => {
-								const value = parseInt(e.target.value)
-								return isNaN(value) ? undefined : value
-							})}
-							placeholder="30000"
-							className="w-full mt-1">
-							<label className="block font-medium mb-1">Request Timeout (ms)</label>
-						</VSCodeTextField>
-						<div className="mt-2">
-							<Checkbox
-								checked={apiConfiguration?.geminiFjUseStreaming ?? true}
-								onChange={(checked: boolean) => {
-									setApiConfigurationField("geminiFjUseStreaming", checked)
-								}}>
-								Enable Streaming Response Processing
-							</Checkbox>
-							<div className="text-sm text-vscode-descriptionForeground mt-1">
-								Process responses as streaming chunks for better real-time output. Disable if your
-								endpoint returns single response objects.
-							</div>
-						</div>
-						<div className="text-sm text-vscode-descriptionForeground mt-2">
-							Configure retry behavior, timeout, and response processing for enhanced error recovery.
-						</div>
-					</>
-				)}
+				<div className="font-medium mb-2">Advanced Options</div>
+				<VSCodeTextField
+					value={apiConfiguration?.geminiFjMaxRetries?.toString() || "3"}
+					onInput={handleInputChange("geminiFjMaxRetries", (e: any) => {
+						const value = parseInt(e.target.value)
+						return isNaN(value) ? 3 : value
+					})}
+					placeholder="3"
+					className="w-full mt-1">
+					<label className="block font-medium mb-1">Max Retries</label>
+				</VSCodeTextField>
+				<VSCodeTextField
+					value={apiConfiguration?.geminiFjRequestTimeout?.toString() || "30000"}
+					onInput={handleInputChange("geminiFjRequestTimeout", (e: any) => {
+						const value = parseInt(e.target.value)
+						return isNaN(value) ? 30000 : value
+					})}
+					placeholder="30000"
+					className="w-full mt-1">
+					<label className="block font-medium mb-1">Request Timeout (ms)</label>
+				</VSCodeTextField>
+				<div className="mt-2">
+					<Checkbox
+						checked={apiConfiguration?.geminiFjUseStreaming ?? true}
+						onChange={(checked: boolean) => {
+							setApiConfigurationField("geminiFjUseStreaming", checked)
+						}}>
+						📡 Enable Streaming Response Processing
+					</Checkbox>
+					<div className="text-sm text-vscode-descriptionForeground mt-1">
+						Process responses as streaming chunks for better real-time output. Disable if your endpoint
+						returns single response objects.
+					</div>
+				</div>
+				<div className="text-sm text-vscode-descriptionForeground mt-2">
+					Configure retry behavior, timeout, and response processing for enhanced error recovery.
+				</div>
 			</div>
 		</>
 	)
