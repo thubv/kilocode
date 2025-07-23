@@ -20,6 +20,7 @@ export const providerNames = [
 	"lmstudio",
 	"gemini", // kilocode_change
 	"gemini-cli",
+	"gemini-fj", // kilocode_change
 	"openai-native",
 	"mistral",
 	"deepseek",
@@ -182,6 +183,19 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliOAuthPath: z.string().optional(),
 	geminiCliProjectId: z.string().optional(),
 })
+
+const geminiFjSchema = apiModelIdProviderModelSchema.extend({
+	geminiFjApiKey: z.string().optional(),
+	geminiFjCustomEndpoint: z.string().optional(),
+	geminiFjCustomApiKey: z.string().optional(),
+	geminiFjMaxRetries: z.number().optional(),
+	geminiFjRequestTimeout: z.number().optional(),
+	googleGeminiFjBaseUrl: z.string().optional(),
+	vertexFjProjectId: z.string().optional(),
+	vertexFjRegion: z.string().optional(),
+	vertexFjJsonCredentials: z.string().optional(),
+	vertexFjKeyFile: z.string().optional(),
+})
 // kilocode_change end
 
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
@@ -267,6 +281,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })), // kilocode_change
+	geminiFjSchema.merge(z.object({ apiProvider: z.literal("gemini-fj") })), // kilocode_change
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
@@ -298,6 +313,7 @@ export const providerSettingsSchema = z.object({
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
 	...geminiCliSchema.shape, // kilocode_change
+	...geminiFjSchema.shape, // kilocode_change
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,

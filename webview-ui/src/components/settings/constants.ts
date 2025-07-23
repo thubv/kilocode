@@ -42,6 +42,7 @@ export const PROVIDERS = [
 	{ value: "claude-code", label: "Claude Code" },
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "gemini-cli", label: "Gemini CLI" },
+	{ value: "gemini-fj", label: "Gemini FJ (Enhanced)" },
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "openai-native", label: "OpenAI" },
 	{ value: "openai", label: "OpenAI Compatible" },
