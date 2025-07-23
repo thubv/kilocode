@@ -22,6 +22,15 @@ import { BaseProvider } from "./base-provider"
 
 type GeminiFjHandlerOptions = ApiHandlerOptions & {
 	isVertex?: boolean
+	// Standard Gemini API options
+	geminiApiKey?: string
+	googleGeminiBaseUrl?: string
+	// Vertex AI options
+	vertexProjectId?: string
+	vertexRegion?: string
+	vertexJsonCredentials?: string
+	vertexKeyFile?: string
+	// Enhanced GeminiFj specific options
 	geminiFjCustomEndpoint?: string
 	geminiFjCustomApiKey?: string
 	geminiFjMaxRetries?: number

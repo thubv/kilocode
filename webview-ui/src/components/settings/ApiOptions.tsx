@@ -18,6 +18,7 @@ import {
 	claudeCodeDefaultModelId,
 	geminiDefaultModelId,
 	geminiCliDefaultModelId,
+	geminiFjDefaultModelId,
 	deepSeekDefaultModelId,
 	mistralDefaultModelId,
 	xaiDefaultModelId,
@@ -59,6 +60,7 @@ import {
 	DeepSeek,
 	Gemini,
 	GeminiCli,
+	GeminiFj,
 	Glama,
 	Groq,
 	LMStudio,
@@ -311,6 +313,7 @@ const ApiOptions = ({
 				"openai-native": { field: "apiModelId", default: openAiNativeDefaultModelId },
 				gemini: { field: "apiModelId", default: geminiDefaultModelId },
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
+				"gemini-fj": { field: "apiModelId", default: geminiFjDefaultModelId },
 				deepseek: { field: "apiModelId", default: deepSeekDefaultModelId },
 				mistral: { field: "apiModelId", default: mistralDefaultModelId },
 				xai: { field: "apiModelId", default: xaiDefaultModelId },
@@ -517,6 +520,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "gemini-cli" && (
 				<GeminiCli apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "gemini-fj" && (
+				<GeminiFj apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "openai" && (
