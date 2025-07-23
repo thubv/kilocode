@@ -134,7 +134,6 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 					<>
 						<VSCodeTextField
 							value={apiConfiguration?.geminiFjMaxRetries?.toString() || ""}
-							type="number"
 							onInput={handleInputChange("geminiFjMaxRetries", (e: any) => {
 								const value = parseInt(e.target.value)
 								return isNaN(value) ? undefined : value
@@ -145,7 +144,6 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 						</VSCodeTextField>
 						<VSCodeTextField
 							value={apiConfiguration?.geminiFjRequestTimeout?.toString() || ""}
-							type="number"
 							onInput={handleInputChange("geminiFjRequestTimeout", (e: any) => {
 								const value = parseInt(e.target.value)
 								return isNaN(value) ? undefined : value
