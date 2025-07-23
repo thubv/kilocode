@@ -1,0 +1,166 @@
+name: Build Extension
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20.19.2
+  PNPM_VERSION: 10.8.1
+
+jobs:
+  build-extension:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Create .env file
+        run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY || 'dummy-key' }}" >> .env
+        
+      - name: Build Extension
+        run: |
+          echo "Building extension..."
+          pnpm build
+          
+          # Get package version
+          current_package_version=$(node -p "require('./src/package.json').version")
+          echo "Built extension version: $current_package_version"
+          
+          # Verify VSIX file exists
+          if [ -f "bin/kilo-code-${current_package_version}.vsix" ]; then
+            echo "✅ Extension built successfully: bin/kilo-code-${current_package_version}.vsix"
+            ls -la bin/
+          else
+            echo "❌ Extension build failed - VSIX file not found"
+            exit 1
+          fi
+          
+          # Save version for later steps
+          echo "EXTENSION_VERSION=$current_package_version" >> $GITHUB_ENV
+          
+      - name: Validate Extension Package
+        run: |
+          echo "Validating extension package..."
+          
+          # Save VSIX contents to a temporary file
+          unzip -l bin/kilo-code-${EXTENSION_VERSION}.vsix > /tmp/kilo-code-vsix-contents.txt
+          
+          # Check for required files
+          echo "Checking for required files..."
+          grep -q "extension/package.json" /tmp/kilo-code-vsix-contents.txt && echo "✅ package.json found" || (echo "❌ package.json missing" && exit 1)
+          grep -q "extension/package.nls.json" /tmp/kilo-code-vsix-contents.txt && echo "✅ package.nls.json found" || (echo "❌ package.nls.json missing" && exit 1)
+          grep -q "extension/dist/extension.js" /tmp/kilo-code-vsix-contents.txt && echo "✅ extension.js found" || (echo "❌ extension.js missing" && exit 1)
+          grep -q "extension/webview-ui/build/assets/index.js" /tmp/kilo-code-vsix-contents.txt && echo "✅ webview assets found" || (echo "❌ webview assets missing" && exit 1)
+          
+          # Get file size
+          file_size=$(ls -lh bin/kilo-code-${EXTENSION_VERSION}.vsix | awk '{print $5}')
+          echo "📦 Extension size: $file_size"
+          
+          # Clean up
+          rm /tmp/kilo-code-vsix-contents.txt
+          
+          echo "✅ Extension validation completed successfully"
+          
+      - name: Upload Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilo-code-extension-${{ env.EXTENSION_VERSION }}
+          path: bin/kilo-code-${{ env.EXTENSION_VERSION }}.vsix
+          retention-days: 30
+          
+      - name: Upload Extension with Branch Info
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilo-code-${{ github.ref_name }}-${{ github.sha }}
+          path: bin/kilo-code-${{ env.EXTENSION_VERSION }}.vsix
+          retention-days: 7
+          
+      - name: Create Download Summary
+        run: |
+          echo "## 🚀 Extension Build Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: \`${{ env.EXTENSION_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Time**: \`$(date -u)\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Download Links" >> $GITHUB_STEP_SUMMARY
+          echo "The extension has been built and is available as artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Main Artifact**: \`kilo-code-extension-${{ env.EXTENSION_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Branch Artifact**: \`kilo-code-${{ github.ref_name }}-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Installation Instructions" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the \`.vsix\` file from the artifacts above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Open VS Code" >> $GITHUB_STEP_SUMMARY
+          echo "3. Go to Extensions view (\`Ctrl+Shift+X\`)" >> $GITHUB_STEP_SUMMARY
+          echo "4. Click the \`...\` menu and select \`Install from VSIX...\`" >> $GITHUB_STEP_SUMMARY
+          echo "5. Select the downloaded \`.vsix\` file" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✨ What's New" >> $GITHUB_STEP_SUMMARY
+          echo "This build includes the new **GeminiFj Provider** with enhanced error handling for custom Gemini API endpoints." >> $GITHUB_STEP_SUMMARY
+          
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+            
+            const extensionArtifact = artifacts.artifacts.find(artifact => 
+              artifact.name.startsWith('kilo-code-extension-')
+            );
+            
+            const comment = `## 🚀 Extension Build Ready!
+            
+**Version**: \`${{ env.EXTENSION_VERSION }}\`
+**Branch**: \`${{ github.ref_name }}\`
+**Commit**: \`${{ github.sha }}\`
+
+### 📥 Download Extension
+The extension has been built and is ready for testing. You can download it from the [Actions artifacts](${context.payload.pull_request.html_url.replace('/pull/', '/actions/runs/')}) page.
+
+### 🔧 Installation
+1. Download the \`.vsix\` file from artifacts
+2. In VS Code: Extensions → \`...\` → \`Install from VSIX...\`
+3. Select the downloaded file
+
+### ✨ Features
+This build includes the **GeminiFj Provider** with:
+- JSON auto-fix for incomplete responses
+- Retry mechanism with exponential backoff  
+- Support for custom Gemini API endpoints
+- Enhanced error handling and logging`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
