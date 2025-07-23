@@ -83,12 +83,12 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 	): ApiStream {
 		// Check if using custom endpoint
 		if (this.options.geminiFjCustomEndpoint && this.options.geminiFjCustomApiKey) {
-			yield* this.createMessageCustomEndpoint(systemInstruction, messages, metadata)
+			yield* this.createMessageCustomEndpoint(systemInstruction, messages)
 			return
 		}
 
 		// Use standard Gemini API
-		yield* this.createMessageStandard(systemInstruction, messages, metadata)
+		yield* this.createMessageStandard(systemInstruction, messages)
 	}
 
 	/**
@@ -195,10 +195,10 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 	private async *createMessageCustomEndpoint(
 		systemInstruction: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const contents = messages.map(convertAnthropicMessageToGemini)
 
+		// Build request according to Vertex AI format
 		const requestData = {
 			contents: [
 				{
@@ -207,6 +207,10 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 				},
 				...contents,
 			],
+			generationConfig: {
+				temperature: this.options.modelTemperature ?? 0,
+				maxOutputTokens: this.options.modelMaxTokens ?? undefined,
+			},
 		}
 
 		const headers = {
@@ -217,16 +221,67 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 		try {
 			const result = await this.makeRequestWithRetry(this.options.geminiFjCustomEndpoint!, requestData, headers)
 
-			// Process response
-			if (result.candidates && result.candidates[0]?.content?.parts) {
-				for (const part of result.candidates[0].content.parts) {
-					if (part.text) {
-						yield { type: "text", text: part.text }
+			console.log("[GeminiFj] Custom endpoint response:", JSON.stringify(result, null, 2))
+
+			let hasContent = false
+
+			// Format 1: Standard Vertex AI format (most likely)
+			if (result.candidates && Array.isArray(result.candidates) && result.candidates.length > 0) {
+				console.log("[GeminiFj] Using standard Vertex AI format")
+				const candidate = result.candidates[0]
+
+				if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+					for (const part of candidate.content.parts) {
+						if (part.text && typeof part.text === "string") {
+							yield { type: "text", text: part.text }
+							hasContent = true
+						}
 					}
 				}
 			}
 
-			// Yield usage info if available
+			// Format 2: Direct text response (fallback)
+			if (!hasContent && result.text && typeof result.text === "string") {
+				console.log("[GeminiFj] Using direct text format")
+				yield { type: "text", text: result.text }
+				hasContent = true
+			}
+
+			// Format 3: Response in 'response' field (fallback)
+			if (!hasContent && result.response && typeof result.response === "string") {
+				console.log("[GeminiFj] Using response field format")
+				yield { type: "text", text: result.response }
+				hasContent = true
+			}
+
+			// Format 4: Response in 'content' field (fallback)
+			if (!hasContent && result.content && typeof result.content === "string") {
+				console.log("[GeminiFj] Using content field format")
+				yield { type: "text", text: result.content }
+				hasContent = true
+			}
+
+			// If no content found, provide detailed error
+			if (!hasContent) {
+				console.error("[GeminiFj] No content found in response. Full response:", result)
+				console.error("[GeminiFj] Response structure keys:", Object.keys(result))
+
+				// Try to extract any text from the response
+				const responseStr = JSON.stringify(result)
+				if (responseStr.length > 50) {
+					console.log("[GeminiFj] Attempting to extract text from response string")
+					yield { type: "text", text: responseStr }
+					hasContent = true
+				} else {
+					yield {
+						type: "error",
+						error: "No content in response",
+						message: `Custom endpoint returned response but no text content found. Response keys: ${Object.keys(result).join(", ")}. Response: ${JSON.stringify(result)}`,
+					}
+				}
+			}
+
+			// Yield usage info if available (Vertex AI format)
 			if (result.usageMetadata) {
 				const inputTokens = result.usageMetadata.promptTokenCount ?? 0
 				const outputTokens = result.usageMetadata.candidatesTokenCount ?? 0
@@ -254,7 +309,6 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 	private async *createMessageStandard(
 		systemInstruction: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const { id: model, info, reasoning: thinkingConfig, maxTokens } = this.getModel()
 
@@ -370,6 +424,10 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 					parts: [{ text: prompt }],
 				},
 			],
+			generationConfig: {
+				temperature: this.options.modelTemperature ?? 0,
+				maxOutputTokens: this.options.modelMaxTokens ?? undefined,
+			},
 		}
 
 		const headers = {
@@ -380,10 +438,36 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 		try {
 			const result = await this.makeRequestWithRetry(this.options.geminiFjCustomEndpoint!, requestData, headers)
 
-			if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
-				return result.candidates[0].content.parts[0].text
+			console.log("[GeminiFj] Complete prompt response:", JSON.stringify(result, null, 2))
+
+			// Format 1: Standard Vertex AI format
+			if (result.candidates && Array.isArray(result.candidates) && result.candidates.length > 0) {
+				const candidate = result.candidates[0]
+				if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+					for (const part of candidate.content.parts) {
+						if (part.text && typeof part.text === "string") {
+							return part.text
+						}
+					}
+				}
 			}
 
+			// Format 2: Direct text response (fallback)
+			if (result.text && typeof result.text === "string") {
+				return result.text
+			}
+
+			// Format 3: Response in 'response' field (fallback)
+			if (result.response && typeof result.response === "string") {
+				return result.response
+			}
+
+			// Format 4: Response in 'content' field (fallback)
+			if (result.content && typeof result.content === "string") {
+				return result.content
+			}
+
+			console.error("[GeminiFj] No text content found in completion response:", result)
 			return ""
 		} catch (error: any) {
 			throw new Error(`GeminiFj custom endpoint completion error: ${error.message}`)
