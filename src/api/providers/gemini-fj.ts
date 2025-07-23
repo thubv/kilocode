@@ -224,10 +224,43 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 			console.log("[GeminiFj] Custom endpoint response:", JSON.stringify(result, null, 2))
 
 			let hasContent = false
+			let lastUsageMetadata: any = null
 
-			// Format 1: Standard Vertex AI format (most likely)
-			if (result.candidates && Array.isArray(result.candidates) && result.candidates.length > 0) {
-				console.log("[GeminiFj] Using standard Vertex AI format")
+			// Handle streaming response format (array of chunks)
+			if (Array.isArray(result)) {
+				console.log("[GeminiFj] Processing streaming response with", result.length, "chunks")
+
+				for (const chunk of result) {
+					if (chunk.candidates && Array.isArray(chunk.candidates) && chunk.candidates.length > 0) {
+						const candidate = chunk.candidates[0]
+
+						if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+							for (const part of candidate.content.parts) {
+								if (part.text && typeof part.text === "string") {
+									// Clean up any XML artifacts
+									let cleanText = part.text
+									// Remove incomplete XML tags
+									cleanText = cleanText.replace(/<[^>]*$/g, "")
+									cleanText = cleanText.replace(/^[^<]*>/g, "")
+
+									if (cleanText.trim()) {
+										yield { type: "text", text: cleanText }
+										hasContent = true
+									}
+								}
+							}
+						}
+					}
+
+					// Keep track of the latest usage metadata
+					if (chunk.usageMetadata) {
+						lastUsageMetadata = chunk.usageMetadata
+					}
+				}
+			}
+			// Handle single response format
+			else if (result.candidates && Array.isArray(result.candidates) && result.candidates.length > 0) {
+				console.log("[GeminiFj] Processing single response format")
 				const candidate = result.candidates[0]
 
 				if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
@@ -238,53 +271,48 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 						}
 					}
 				}
-			}
 
-			// Format 2: Direct text response (fallback)
-			if (!hasContent && result.text && typeof result.text === "string") {
-				console.log("[GeminiFj] Using direct text format")
-				yield { type: "text", text: result.text }
-				hasContent = true
-			}
-
-			// Format 3: Response in 'response' field (fallback)
-			if (!hasContent && result.response && typeof result.response === "string") {
-				console.log("[GeminiFj] Using response field format")
-				yield { type: "text", text: result.response }
-				hasContent = true
-			}
-
-			// Format 4: Response in 'content' field (fallback)
-			if (!hasContent && result.content && typeof result.content === "string") {
-				console.log("[GeminiFj] Using content field format")
-				yield { type: "text", text: result.content }
-				hasContent = true
-			}
-
-			// If no content found, provide detailed error
-			if (!hasContent) {
-				console.error("[GeminiFj] No content found in response. Full response:", result)
-				console.error("[GeminiFj] Response structure keys:", Object.keys(result))
-
-				// Try to extract any text from the response
-				const responseStr = JSON.stringify(result)
-				if (responseStr.length > 50) {
-					console.log("[GeminiFj] Attempting to extract text from response string")
-					yield { type: "text", text: responseStr }
-					hasContent = true
-				} else {
-					yield {
-						type: "error",
-						error: "No content in response",
-						message: `Custom endpoint returned response but no text content found. Response keys: ${Object.keys(result).join(", ")}. Response: ${JSON.stringify(result)}`,
-					}
+				if (result.usageMetadata) {
+					lastUsageMetadata = result.usageMetadata
 				}
 			}
 
-			// Yield usage info if available (Vertex AI format)
-			if (result.usageMetadata) {
-				const inputTokens = result.usageMetadata.promptTokenCount ?? 0
-				const outputTokens = result.usageMetadata.candidatesTokenCount ?? 0
+			// Fallback formats for non-streaming responses
+			if (!hasContent) {
+				// Format 2: Direct text response
+				if (result.text && typeof result.text === "string") {
+					console.log("[GeminiFj] Using direct text format")
+					yield { type: "text", text: result.text }
+					hasContent = true
+				}
+				// Format 3: Response in 'response' field
+				else if (result.response && typeof result.response === "string") {
+					console.log("[GeminiFj] Using response field format")
+					yield { type: "text", text: result.response }
+					hasContent = true
+				}
+				// Format 4: Response in 'content' field
+				else if (result.content && typeof result.content === "string") {
+					console.log("[GeminiFj] Using content field format")
+					yield { type: "text", text: result.content }
+					hasContent = true
+				}
+			}
+
+			// If still no content found, provide detailed error
+			if (!hasContent) {
+				console.error("[GeminiFj] No content found in response. Full response:", result)
+				yield {
+					type: "error",
+					error: "No content in response",
+					message: `Custom endpoint returned response but no text content found. Response type: ${Array.isArray(result) ? "array" : "object"}`,
+				}
+			}
+
+			// Yield usage info if available
+			if (lastUsageMetadata) {
+				const inputTokens = lastUsageMetadata.promptTokenCount ?? 0
+				const outputTokens = lastUsageMetadata.candidatesTokenCount ?? 0
 
 				yield {
 					type: "usage",
@@ -440,8 +468,35 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 
 			console.log("[GeminiFj] Complete prompt response:", JSON.stringify(result, null, 2))
 
-			// Format 1: Standard Vertex AI format
-			if (result.candidates && Array.isArray(result.candidates) && result.candidates.length > 0) {
+			let allText = ""
+
+			// Handle streaming response format (array of chunks)
+			if (Array.isArray(result)) {
+				console.log("[GeminiFj] Processing streaming completion response with", result.length, "chunks")
+
+				for (const chunk of result) {
+					if (chunk.candidates && Array.isArray(chunk.candidates) && chunk.candidates.length > 0) {
+						const candidate = chunk.candidates[0]
+
+						if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+							for (const part of candidate.content.parts) {
+								if (part.text && typeof part.text === "string") {
+									// Clean up any XML artifacts
+									let cleanText = part.text
+									cleanText = cleanText.replace(/<[^>]*$/g, "")
+									cleanText = cleanText.replace(/^[^<]*>/g, "")
+
+									allText += cleanText
+								}
+							}
+						}
+					}
+				}
+
+				return allText
+			}
+			// Handle single response format
+			else if (result.candidates && Array.isArray(result.candidates) && result.candidates.length > 0) {
 				const candidate = result.candidates[0]
 				if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
 					for (const part of candidate.content.parts) {
@@ -452,17 +507,15 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 				}
 			}
 
-			// Format 2: Direct text response (fallback)
+			// Fallback formats
 			if (result.text && typeof result.text === "string") {
 				return result.text
 			}
 
-			// Format 3: Response in 'response' field (fallback)
 			if (result.response && typeof result.response === "string") {
 				return result.response
 			}
 
-			// Format 4: Response in 'content' field (fallback)
 			if (result.content && typeof result.content === "string") {
 				return result.content
 			}
