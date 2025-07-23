@@ -22,11 +22,9 @@ import { BaseProvider } from "./base-provider"
 
 type GeminiFjHandlerOptions = ApiHandlerOptions & {
 	isVertex?: boolean
-	// Vertex AI options (for 100% compatibility)
-	vertexProjectId?: string
-	vertexRegion?: string
-	vertexJsonCredentials?: string
-	vertexKeyFile?: string
+	// Standard Gemini API options (same as gemini provider)
+	geminiApiKey?: string
+	googleGeminiBaseUrl?: string
 	// Enhanced GeminiFj specific options
 	geminiFjCustomEndpoint?: string
 	geminiFjCustomApiKey?: string
@@ -49,27 +47,10 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 		this.maxRetries = options.geminiFjMaxRetries ?? 3
 		this.requestTimeout = options.geminiFjRequestTimeout ?? 30000
 
-		const project = this.options.vertexProjectId ?? "not-provided"
-		const location = this.options.vertexRegion ?? "not-provided"
+		const apiKey = this.options.geminiApiKey ?? "not-provided"
 
-		// Initialize client for Vertex AI only (100% compatibility with standard Gemini provider)
-		this.client = this.options.vertexJsonCredentials
-			? new GoogleGenAI({
-					vertexai: true,
-					project,
-					location,
-					googleAuthOptions: {
-						credentials: safeJsonParse<JWTInput>(this.options.vertexJsonCredentials, undefined),
-					},
-				})
-			: this.options.vertexKeyFile
-				? new GoogleGenAI({
-						vertexai: true,
-						project,
-						location,
-						googleAuthOptions: { keyFile: this.options.vertexKeyFile },
-					})
-				: new GoogleGenAI({ vertexai: true, project, location })
+		// Initialize client for standard Gemini API (same as gemini provider)
+		this.client = new GoogleGenAI({ apiKey })
 	}
 
 	async *createMessage(
@@ -340,6 +321,7 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 
 		const config: GenerateContentConfig = {
 			systemInstruction,
+			httpOptions: this.options.googleGeminiBaseUrl ? { baseUrl: this.options.googleGeminiBaseUrl } : undefined,
 			thinkingConfig,
 			maxOutputTokens: this.options.modelMaxTokens ?? maxTokens ?? undefined,
 			temperature: this.options.modelTemperature ?? 0,
@@ -530,6 +512,9 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 				model,
 				contents: [{ role: "user", parts: [{ text: prompt }] }],
 				config: {
+					httpOptions: this.options.googleGeminiBaseUrl
+						? { baseUrl: this.options.googleGeminiBaseUrl }
+						: undefined,
 					temperature: this.options.modelTemperature ?? 0,
 				},
 			})

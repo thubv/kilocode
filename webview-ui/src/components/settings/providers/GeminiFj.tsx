@@ -1,14 +1,13 @@
 import { useCallback, useState } from "react"
 import { Checkbox } from "vscrui"
-import { VSCodeTextField, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import { type ProviderSettings, VERTEX_REGIONS } from "@roo-code/types"
+import type { ProviderSettings } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
+import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 
 import { inputEventTransform } from "../transforms"
-import { GeminiFjTokenLimitDisplay } from "./GeminiFjTokenLimitDisplay"
 
 type GeminiFjProps = {
 	apiConfiguration: ProviderSettings
@@ -17,6 +16,10 @@ type GeminiFjProps = {
 
 export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiFjProps) => {
 	const { t } = useAppTranslation()
+
+	const [googleGeminiBaseUrlSelected, setGoogleGeminiBaseUrlSelected] = useState(
+		!!apiConfiguration?.googleGeminiBaseUrl,
+	)
 	const [customEndpointSelected, setCustomEndpointSelected] = useState(!!apiConfiguration?.geminiFjCustomEndpoint)
 	const [advancedOptionsSelected, setAdvancedOptionsSelected] = useState(
 		!!(
@@ -39,71 +42,43 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 
 	return (
 		<>
-			{/* Vertex AI Configuration */}
-			<div className="text-sm text-vscode-descriptionForeground">
-				<div className="flex justify-between items-center mb-2">
-					<div>{t("settings:providers.googleCloudSetup.title")}</div>
-					<GeminiFjTokenLimitDisplay />
-				</div>
-				<div>
-					<VSCodeLink
-						href="https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-claude#before_you_begin"
-						className="text-sm">
-						{t("settings:providers.googleCloudSetup.step1")}
-					</VSCodeLink>
-				</div>
-				<div>
-					<VSCodeLink
-						href="https://cloud.google.com/docs/authentication/provide-credentials-adc#google-idp"
-						className="text-sm">
-						{t("settings:providers.googleCloudSetup.step2")}
-					</VSCodeLink>
-				</div>
-				<div>
-					<VSCodeLink
-						href="https://developers.google.com/workspace/guides/create-credentials?hl=en#service-account"
-						className="text-sm">
-						{t("settings:providers.googleCloudSetup.step3")}
-					</VSCodeLink>
-				</div>
+			{/* Gemini API Configuration */}
+			<VSCodeTextField
+				value={apiConfiguration?.geminiApiKey || ""}
+				type="password"
+				onInput={handleInputChange("geminiApiKey")}
+				placeholder={t("settings:placeholders.apiKey")}
+				className="w-full">
+				<label className="block font-medium mb-1">{t("settings:providers.geminiApiKey")}</label>
+			</VSCodeTextField>
+			<div className="text-sm text-vscode-descriptionForeground -mt-2">
+				{t("settings:providers.apiKeyStorageNotice")}
 			</div>
-			<VSCodeTextField
-				value={apiConfiguration?.vertexJsonCredentials || ""}
-				onInput={handleInputChange("vertexJsonCredentials")}
-				placeholder={t("settings:placeholders.credentialsJson")}
-				className="w-full">
-				<label className="block font-medium mb-1">{t("settings:providers.googleCloudCredentials")}</label>
-			</VSCodeTextField>
-			<VSCodeTextField
-				value={apiConfiguration?.vertexKeyFile || ""}
-				onInput={handleInputChange("vertexKeyFile")}
-				placeholder={t("settings:placeholders.keyFilePath")}
-				className="w-full">
-				<label className="block font-medium mb-1">{t("settings:providers.googleCloudKeyFile")}</label>
-			</VSCodeTextField>
-			<VSCodeTextField
-				value={apiConfiguration?.vertexProjectId || ""}
-				onInput={handleInputChange("vertexProjectId")}
-				placeholder={t("settings:placeholders.projectId")}
-				className="w-full">
-				<label className="block font-medium mb-1">{t("settings:providers.googleCloudProjectId")}</label>
-			</VSCodeTextField>
+			{!apiConfiguration?.geminiApiKey && (
+				<VSCodeButtonLink href="https://ai.google.dev/" appearance="secondary">
+					{t("settings:providers.getGeminiApiKey")}
+				</VSCodeButtonLink>
+			)}
 			<div>
-				<label className="block font-medium mb-1">{t("settings:providers.googleCloudRegion")}</label>
-				<Select
-					value={apiConfiguration?.vertexRegion || ""}
-					onValueChange={(value) => setApiConfigurationField("vertexRegion", value)}>
-					<SelectTrigger className="w-full">
-						<SelectValue placeholder={t("settings:common.select")} />
-					</SelectTrigger>
-					<SelectContent>
-						{VERTEX_REGIONS.map(({ value, label }) => (
-							<SelectItem key={value} value={value}>
-								{label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+				<Checkbox
+					checked={googleGeminiBaseUrlSelected}
+					onChange={(checked: boolean) => {
+						setGoogleGeminiBaseUrlSelected(checked)
+						if (!checked) {
+							setApiConfigurationField("googleGeminiBaseUrl", "")
+						}
+					}}>
+					{t("settings:providers.useCustomBaseUrl")}
+				</Checkbox>
+				{googleGeminiBaseUrlSelected && (
+					<VSCodeTextField
+						value={apiConfiguration?.googleGeminiBaseUrl || ""}
+						type="url"
+						onInput={handleInputChange("googleGeminiBaseUrl")}
+						placeholder={t("settings:defaults.geminiUrl")}
+						className="w-full mt-1"
+					/>
+				)}
 			</div>
 
 			{/* Custom Endpoint for Enhanced Features */}

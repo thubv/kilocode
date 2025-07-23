@@ -185,11 +185,9 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 })
 
 const geminiFjSchema = apiModelIdProviderModelSchema.extend({
-	// Vertex AI options (same as vertex provider for 100% compatibility)
-	vertexProjectId: z.string().optional(),
-	vertexRegion: z.string().optional(),
-	vertexJsonCredentials: z.string().optional(),
-	vertexKeyFile: z.string().optional(),
+	// Standard Gemini API options (same as gemini provider)
+	geminiApiKey: z.string().optional(),
+	googleGeminiBaseUrl: z.string().optional(),
 
 	// Enhanced GeminiFj specific options
 	geminiFjCustomEndpoint: z.string().optional(),
