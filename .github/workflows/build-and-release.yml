@@ -1,14 +1,12 @@
 name: Build and Release Extension
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       create_release:
         description: 'Create GitHub Release'
         required: false
-        default: false
+        default: true
         type: boolean
 
 env:
@@ -20,47 +18,47 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
-          
+
       - name: Install dependencies
         run: pnpm install
-        
+
       - name: Create .env file
         run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY || 'dummy-key' }}" >> .env
-        
+
       - name: Build Extension
         run: |
-          echo "🔨 Building extension..."
+          echo "Building extension..."
           pnpm build
-          
+
           # Get package version and info
           current_package_version=$(node -p "require('./src/package.json').version")
           package_name=$(node -p "require('./src/package.json').name")
-          
-          echo "📦 Built: $package_name v$current_package_version"
+
+          echo "Built: $package_name v$current_package_version"
           echo "EXTENSION_VERSION=$current_package_version" >> $GITHUB_ENV
           echo "PACKAGE_NAME=$package_name" >> $GITHUB_ENV
-          
+
           # Verify build
           if [ -f "bin/kilo-code-${current_package_version}.vsix" ]; then
             file_size=$(ls -lh bin/kilo-code-${current_package_version}.vsix | awk '{print $5}')
-            echo "✅ Extension built successfully (Size: $file_size)"
+            echo "Extension built successfully (Size: $file_size)"
           else
-            echo "❌ Build failed - VSIX not found"
+            echo "Build failed - VSIX not found"
             exit 1
           fi
           
@@ -72,77 +70,28 @@ jobs:
           retention-days: 90
           
       - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true' || github.ref == 'refs/heads/main'
+        if: github.event.inputs.create_release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create release tag
           release_tag="build-${{ env.EXTENSION_VERSION }}-$(date +%Y%m%d-%H%M%S)"
-          
-          # Get commit info
-          commit_message=$(git log -1 --pretty=format:"%s")
-          commit_author=$(git log -1 --pretty=format:"%an")
-          
-          # Create release notes
-          cat > release_notes.md << EOF
-          ## 🚀 Extension Build v${{ env.EXTENSION_VERSION }}
-          
-          **Build Date**: $(date -u)
-          **Branch**: ${{ github.ref_name }}
-          **Commit**: ${{ github.sha }}
-          **Author**: $commit_author
-          
-          ### 📝 Latest Commit
-          \`$commit_message\`
-          
-          ### 📥 Installation
-          1. Download the \`.vsix\` file below
-          2. Open VS Code
-          3. Go to Extensions (\`Ctrl+Shift+X\`)
-          4. Click \`...\` → \`Install from VSIX...\`
-          5. Select the downloaded file
-          
-          ### ✨ Features in this Build
-          - **GeminiFj Provider**: Enhanced Gemini API with JSON auto-fix
-          - **Error Recovery**: Automatic retry with exponential backoff
-          - **Custom Endpoints**: Support for company-specific Gemini APIs
-          - **Robust Logging**: Detailed error tracking and debugging
-          
-          ### 🔧 Configuration
-          To use the GeminiFj provider:
-          1. Open VS Code Settings
-          2. Search for "API Provider"
-          3. Select "Gemini FJ (Enhanced)"
-          4. Configure your endpoint and API key
-          EOF
-          
+
           # Create release
           gh release create "$release_tag" \
             --title "Extension Build v${{ env.EXTENSION_VERSION }}" \
-            --notes-file release_notes.md \
+            --notes "Extension build from commit ${{ github.sha }}" \
             --target ${{ github.sha }} \
             bin/kilo-code-${{ env.EXTENSION_VERSION }}.vsix
-            
-          echo "✅ Created release: $release_tag"
-          echo "🔗 Download URL: https://github.com/${{ github.repository }}/releases/tag/$release_tag"
-          
+
+          echo "Created release: $release_tag"
+          echo "Download URL: https://github.com/${{ github.repository }}/releases/tag/$release_tag"
       - name: Create Build Summary
         run: |
-          echo "## 🎉 Extension Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "## Extension Build Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: \`${{ env.PACKAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: \`${{ env.EXTENSION_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Time**: \`$(date -u)\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Package**: ${{ env.PACKAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ env.EXTENSION_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Download Options" >> $GITHUB_STEP_SUMMARY
-          echo "1. **Artifacts**: Available in the [Actions artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          echo "2. **Releases**: Check [Releases page](${{ github.server_url }}/${{ github.repository }}/releases) for permanent downloads" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 Quick Install" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "# Download and install via command line" >> $GITHUB_STEP_SUMMARY
-          echo "code --install-extension kilo-code-${{ env.EXTENSION_VERSION }}.vsix" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "Check the Releases page for download links." >> $GITHUB_STEP_SUMMARY
