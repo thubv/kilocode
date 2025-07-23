@@ -22,10 +22,7 @@ import { BaseProvider } from "./base-provider"
 
 type GeminiFjHandlerOptions = ApiHandlerOptions & {
 	isVertex?: boolean
-	// Standard Gemini API options
-	geminiApiKey?: string
-	googleGeminiBaseUrl?: string
-	// Vertex AI options
+	// Vertex AI options (for 100% compatibility)
 	vertexProjectId?: string
 	vertexRegion?: string
 	vertexJsonCredentials?: string
@@ -35,6 +32,7 @@ type GeminiFjHandlerOptions = ApiHandlerOptions & {
 	geminiFjCustomApiKey?: string
 	geminiFjMaxRetries?: number
 	geminiFjRequestTimeout?: number
+	geminiFjUseStreaming?: boolean
 }
 
 export class GeminiFjHandler extends BaseProvider implements SingleCompletionHandler {
@@ -53,8 +51,8 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 
 		const project = this.options.vertexProjectId ?? "not-provided"
 		const location = this.options.vertexRegion ?? "not-provided"
-		const apiKey = this.options.geminiApiKey ?? "not-provided"
 
+		// Initialize client for Vertex AI only (100% compatibility with standard Gemini provider)
 		this.client = this.options.vertexJsonCredentials
 			? new GoogleGenAI({
 					vertexai: true,
@@ -71,9 +69,7 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 						location,
 						googleAuthOptions: { keyFile: this.options.vertexKeyFile },
 					})
-				: isVertex
-					? new GoogleGenAI({ vertexai: true, project, location })
-					: new GoogleGenAI({ apiKey })
+				: new GoogleGenAI({ vertexai: true, project, location })
 	}
 
 	async *createMessage(
@@ -226,8 +222,8 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 			let hasContent = false
 			let lastUsageMetadata: any = null
 
-			// Handle streaming response format (array of chunks)
-			if (Array.isArray(result)) {
+			// Handle streaming response format (array of chunks) - only if streaming is enabled
+			if (Array.isArray(result) && this.options.geminiFjUseStreaming !== false) {
 				console.log("[GeminiFj] Processing streaming response with", result.length, "chunks")
 
 				for (const chunk of result) {
@@ -344,7 +340,6 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 
 		const config: GenerateContentConfig = {
 			systemInstruction,
-			httpOptions: this.options.googleGeminiBaseUrl ? { baseUrl: this.options.googleGeminiBaseUrl } : undefined,
 			thinkingConfig,
 			maxOutputTokens: this.options.modelMaxTokens ?? maxTokens ?? undefined,
 			temperature: this.options.modelTemperature ?? 0,
@@ -470,8 +465,8 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 
 			let allText = ""
 
-			// Handle streaming response format (array of chunks)
-			if (Array.isArray(result)) {
+			// Handle streaming response format (array of chunks) - only if streaming is enabled
+			if (Array.isArray(result) && this.options.geminiFjUseStreaming !== false) {
 				console.log("[GeminiFj] Processing streaming completion response with", result.length, "chunks")
 
 				for (const chunk of result) {
@@ -535,9 +530,6 @@ export class GeminiFjHandler extends BaseProvider implements SingleCompletionHan
 				model,
 				contents: [{ role: "user", parts: [{ text: prompt }] }],
 				config: {
-					httpOptions: this.options.googleGeminiBaseUrl
-						? { baseUrl: this.options.googleGeminiBaseUrl }
-						: undefined,
 					temperature: this.options.modelTemperature ?? 0,
 				},
 			})

@@ -185,11 +185,7 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 })
 
 const geminiFjSchema = apiModelIdProviderModelSchema.extend({
-	// Standard Gemini API options (same as gemini provider)
-	geminiApiKey: z.string().optional(),
-	googleGeminiBaseUrl: z.string().optional(),
-
-	// Vertex AI options (same as vertex provider)
+	// Vertex AI options (same as vertex provider for 100% compatibility)
 	vertexProjectId: z.string().optional(),
 	vertexRegion: z.string().optional(),
 	vertexJsonCredentials: z.string().optional(),
@@ -200,6 +196,7 @@ const geminiFjSchema = apiModelIdProviderModelSchema.extend({
 	geminiFjCustomApiKey: z.string().optional(),
 	geminiFjMaxRetries: z.number().optional(),
 	geminiFjRequestTimeout: z.number().optional(),
+	geminiFjUseStreaming: z.boolean().optional(),
 })
 // kilocode_change end
 
