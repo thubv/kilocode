@@ -14,6 +14,8 @@ export const geminiFjModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
+		maxThinkingTokens: 32_768,
+		supportsReasoningBudget: true,
 	},
 	"gemini-2.0-flash-exp": {
 		maxTokens: 8192,
@@ -22,6 +24,8 @@ export const geminiFjModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
+		maxThinkingTokens: 16_384,
+		supportsReasoningBudget: true,
 	},
 	"gemini-2.5-flash": {
 		maxTokens: 64_000,
@@ -44,6 +48,8 @@ export const geminiFjModels = {
 		outputPrice: 0.6,
 		cacheReadsPrice: 0.0375,
 		cacheWritesPrice: 1.0,
+		maxThinkingTokens: 16_384,
+		supportsReasoningBudget: true,
 		tiers: [
 			{
 				contextWindow: 128_000,
