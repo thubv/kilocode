@@ -3,11 +3,13 @@ import { Checkbox } from "vscrui"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
 import type { ProviderSettings } from "@roo-code/types"
+import { geminiFjDefaultModelId, geminiFjModels } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 
 import { inputEventTransform } from "../transforms"
+import { ModelPicker } from "../ModelPicker"
 
 type GeminiFjProps = {
 	apiConfiguration: ProviderSettings
@@ -112,6 +114,17 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 					</>
 				)}
 			</div>
+
+			{/* Model Selection */}
+			<ModelPicker
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				defaultModelId={geminiFjDefaultModelId}
+				models={geminiFjModels}
+				modelIdKey="apiModelId"
+				serviceName="Gemini FJ"
+				serviceUrl="https://ai.google.dev/"
+			/>
 
 			{/* Advanced Options - Always Visible */}
 			<div>
