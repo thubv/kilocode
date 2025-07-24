@@ -12,6 +12,8 @@ import {
 	geminiModels,
 	geminiCliDefaultModelId,
 	geminiCliModels,
+	geminiFjDefaultModelId,
+	geminiFjModels,
 	mistralDefaultModelId,
 	mistralModels,
 	openAiModelInfoSaneDefaults,
@@ -182,6 +184,11 @@ function getSelectedModel({
 		case "gemini-cli": {
 			const id = apiConfiguration.apiModelId ?? geminiCliDefaultModelId
 			const info = geminiCliModels[id as keyof typeof geminiCliModels]
+			return { id, info }
+		}
+		case "gemini-fj": {
+			const id = apiConfiguration.apiModelId ?? geminiFjDefaultModelId
+			const info = geminiFjModels[id as keyof typeof geminiFjModels]
 			return { id, info }
 		}
 		case "deepseek": {
