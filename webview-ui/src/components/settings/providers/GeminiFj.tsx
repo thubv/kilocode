@@ -14,9 +14,10 @@ import { ModelPicker } from "../ModelPicker"
 type GeminiFjProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	organizationAllowList?: any
 }
 
-export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiFjProps) => {
+export const GeminiFj = ({ apiConfiguration, setApiConfigurationField, organizationAllowList }: GeminiFjProps) => {
 	const { t } = useAppTranslation()
 
 	const [googleGeminiBaseUrlSelected, setGoogleGeminiBaseUrlSelected] = useState(
@@ -124,6 +125,7 @@ export const GeminiFj = ({ apiConfiguration, setApiConfigurationField }: GeminiF
 				modelIdKey="apiModelId"
 				serviceName="Gemini FJ"
 				serviceUrl="https://ai.google.dev/"
+				organizationAllowList={organizationAllowList || {}}
 			/>
 
 			{/* Advanced Options - Always Visible */}
