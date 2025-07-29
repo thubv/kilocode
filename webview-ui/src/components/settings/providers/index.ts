@@ -10,6 +10,7 @@ export { Glama } from "./Glama"
 export { Groq } from "./Groq"
 export { LMStudio } from "./LMStudio"
 export { Mistral } from "./Mistral"
+export { Moonshot } from "./Moonshot"
 export { Ollama } from "./Ollama"
 export { OpenAI } from "./OpenAI"
 export { OpenAICompatible } from "./OpenAICompatible"
@@ -20,4 +21,5 @@ export { Vertex } from "./Vertex"
 export { VSCodeLM } from "./VSCodeLM"
 export { XAI } from "./XAI"
 export { LiteLLM } from "./LiteLLM"
+export { VirtualQuotaFallbackProvider } from "./VirtualQuotaFallbackProvider" // kilocode_change
 export { Cerebras } from "./Cerebras" // kilocode_change
