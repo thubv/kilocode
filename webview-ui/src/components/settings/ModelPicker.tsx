@@ -36,6 +36,7 @@ type ModelIdKey = keyof Pick<
 	| "openAiModelId"
 	| "litellmModelId"
 	| "kilocodeModel"
+	| "apiModelId"
 >
 
 interface ModelPickerProps {

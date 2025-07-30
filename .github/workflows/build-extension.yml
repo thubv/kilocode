@@ -1,0 +1,94 @@
+name: Build Extension
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20.19.2
+  PNPM_VERSION: 10.8.1
+
+jobs:
+  build-extension:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Create .env file
+        run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY || 'dummy-key' }}" >> .env
+
+      - name: Build Extension
+        run: |
+          echo "Building extension..."
+          pnpm build
+
+          # Get package version
+          current_package_version=$(node -p "require('./src/package.json').version")
+          echo "Built extension version: $current_package_version"
+
+          # Verify VSIX file exists
+          if [ -f "bin/kilo-code-${current_package_version}.vsix" ]; then
+            echo "Extension built successfully: bin/kilo-code-${current_package_version}.vsix"
+            ls -la bin/
+          else
+            echo "Extension build failed - VSIX file not found"
+            exit 1
+          fi
+
+          # Save version for later steps
+          echo "EXTENSION_VERSION=$current_package_version" >> $GITHUB_ENV
+          
+      - name: Validate Extension Package
+        run: |
+          echo "Validating extension package..."
+
+          # Get file size
+          file_size=$(ls -lh bin/kilo-code-${EXTENSION_VERSION}.vsix | awk '{print $5}')
+          echo "Extension size: $file_size"
+
+          # Basic validation - check if file is not empty
+          if [ -s "bin/kilo-code-${EXTENSION_VERSION}.vsix" ]; then
+            echo "Extension validation completed successfully"
+          else
+            echo "Extension file is empty or corrupted"
+            exit 1
+          fi
+          
+      - name: Upload Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilo-code-extension-${{ env.EXTENSION_VERSION }}
+          path: bin/kilo-code-${{ env.EXTENSION_VERSION }}.vsix
+          retention-days: 30
+          
+      - name: Create Download Summary
+        run: |
+          echo "## Extension Build Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ env.EXTENSION_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download the extension from the artifacts above." >> $GITHUB_STEP_SUMMARY
+

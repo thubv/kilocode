@@ -53,6 +53,7 @@ import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } fro
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 import { cn } from "@/lib/utils"
 import { KiloChatRowUserFeedback } from "../kilocode/chat/KiloChatRowUserFeedback" // kilocode_change
+import { StandardTooltip } from "../ui" // kilocode_change
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -131,7 +132,7 @@ export const ChatRowContent = ({
 	editable,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
@@ -196,10 +197,11 @@ export const ChatRowContent = ({
 	}, [message.ts])
 	*/
 
-	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
+	// kilocode_change: usageMissing
+	const [cost, usageMissing, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
 			const info = safeJsonParse<ClineApiReqInfo>(message.text)
-			return [info?.cost, info?.cancelReason, info?.streamingFailedMessage]
+			return [info?.cost, info?.usageMissing, info?.cancelReason, info?.streamingFailedMessage]
 		}
 
 		return [undefined, undefined, undefined]
@@ -552,6 +554,7 @@ export const ChatRowContent = ({
 							isLoading={message.partial}
 							isExpanded={isExpanded}
 							onToggleExpand={handleToggleExpand}
+							onJumpToFile={() => vscode.postMessage({ type: "openFile", text: "./" + tool.path })}
 						/>
 					</>
 				)
@@ -1027,15 +1030,22 @@ export const ChatRowContent = ({
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
 									{title}
-									{/* kilocode_change */}
-									{apiConfiguration?.apiProvider !== "kilocode" && (
-										<VSCodeBadge
-											style={{
-												opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0,
-											}}>
-											${Number(cost || 0)?.toFixed(4)}
-										</VSCodeBadge>
-									)}
+									{
+										// kilocode_change start
+										!cost && usageMissing && (
+											<StandardTooltip content="The API Provider did not provide any cost data or the request was canceled.">
+												<VSCodeBadge className="whitespace-nowrap">
+													<span className="codicon codicon-warning pr-1"></span>
+													no data
+												</VSCodeBadge>
+											</StandardTooltip>
+										)
+										// kilocode_change end
+									}
+									<VSCodeBadge
+										style={{ opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0 }}>
+										${Number(cost || 0)?.toFixed(4)}
+									</VSCodeBadge>
 								</div>
 								<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 							</div>
@@ -1176,6 +1186,7 @@ export const ChatRowContent = ({
 					const { results = [] } = parsed?.content || {}
 
 					return <CodebaseSearchResultsDisplay results={results} />
+				// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
 				case "browser_action_result":
 					// This should not normally be rendered here as browser_action_result messages
 					// should be grouped into browser sessions and rendered by BrowserSessionRow.
@@ -1207,6 +1218,7 @@ export const ChatRowContent = ({
 							</div>
 						</>
 					)
+				// kilocode_change end
 				case "user_edit_todos":
 					return <UpdateTodoListToolBlock userEdited onChange={() => {}} />
 				default:

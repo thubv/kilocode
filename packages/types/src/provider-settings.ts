@@ -20,8 +20,10 @@ export const providerNames = [
 	"lmstudio",
 	"gemini", // kilocode_change
 	"gemini-cli",
+	"gemini-fj", // kilocode_change
 	"openai-native",
 	"mistral",
+	"moonshot",
 	"deepseek",
 	"unbound",
 	"requesty",
@@ -34,6 +36,8 @@ export const providerNames = [
 	"fireworks", // kilocode_change
 	"kilocode", // kilocode_change
 	"cerebras", // kilocode_change
+	"virtual-quota-fallback", // kilocode_change
+	"huggingface",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -122,6 +126,8 @@ const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsUsePromptCache: z.boolean().optional(),
 	awsProfile: z.string().optional(),
 	awsUseProfile: z.boolean().optional(),
+	awsApiKey: z.string().optional(),
+	awsUseApiKey: z.boolean().optional(),
 	awsCustomArn: z.string().optional(),
 	awsModelContextWindow: z.number().optional(),
 	awsBedrockEndpointEnabled: z.boolean().optional(),
@@ -182,6 +188,19 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliOAuthPath: z.string().optional(),
 	geminiCliProjectId: z.string().optional(),
 })
+
+const geminiFjSchema = apiModelIdProviderModelSchema.extend({
+	// Standard Gemini API options (same as gemini provider)
+	geminiApiKey: z.string().optional(),
+	googleGeminiBaseUrl: z.string().optional(),
+
+	// Enhanced GeminiFj specific options
+	geminiFjCustomEndpoint: z.string().optional(),
+	geminiFjCustomApiKey: z.string().optional(),
+	geminiFjMaxRetries: z.number().optional(),
+	geminiFjRequestTimeout: z.number().optional(),
+	geminiFjUseStreaming: z.boolean().optional(),
+})
 // kilocode_change end
 
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
@@ -197,6 +216,13 @@ const mistralSchema = apiModelIdProviderModelSchema.extend({
 const deepSeekSchema = apiModelIdProviderModelSchema.extend({
 	deepSeekBaseUrl: z.string().optional(),
 	deepSeekApiKey: z.string().optional(),
+})
+
+const moonshotSchema = apiModelIdProviderModelSchema.extend({
+	moonshotBaseUrl: z
+		.union([z.literal("https://api.moonshot.ai/v1"), z.literal("https://api.moonshot.cn/v1")])
+		.optional(),
+	moonshotApiKey: z.string().optional(),
 })
 
 const unboundSchema = baseProviderSettingsSchema.extend({
@@ -223,6 +249,12 @@ const groqSchema = apiModelIdProviderModelSchema.extend({
 	groqApiKey: z.string().optional(),
 })
 
+const huggingFaceSchema = baseProviderSettingsSchema.extend({
+	huggingFaceApiKey: z.string().optional(),
+	huggingFaceModelId: z.string().optional(),
+	huggingFaceInferenceProvider: z.string().optional(),
+})
+
 const chutesSchema = apiModelIdProviderModelSchema.extend({
 	chutesApiKey: z.string().optional(),
 })
@@ -237,16 +269,32 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
 	kilocodeModel: z.string().optional(),
+	openRouterSpecificProvider: z.string().optional(),
 })
-
 const fireworksSchema = baseProviderSettingsSchema.extend({
 	fireworksModelId: z.string().optional(),
 	fireworksApiKey: z.string().optional(),
 })
-
 const cerebrasSchema = baseProviderSettingsSchema.extend({
 	cerebrasApiKey: z.string().optional(),
 	cerebrasModelId: z.string().optional(),
+})
+export const virtualQuotaFallbackProfileDataSchema = z.object({
+	profileName: z.string().optional(),
+	profileId: z.string().optional(),
+	profileLimits: z
+		.object({
+			tokensPerMinute: z.coerce.number().optional(),
+			tokensPerHour: z.coerce.number().optional(),
+			tokensPerDay: z.coerce.number().optional(),
+			requestsPerMinute: z.coerce.number().optional(),
+			requestsPerHour: z.coerce.number().optional(),
+			requestsPerDay: z.coerce.number().optional(),
+		})
+		.optional(),
+})
+const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
+	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
 // kilocode_change end
 
@@ -267,20 +315,24 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })), // kilocode_change
+	geminiFjSchema.merge(z.object({ apiProvider: z.literal("gemini-fj") })), // kilocode_change
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
+	moonshotSchema.merge(z.object({ apiProvider: z.literal("moonshot") })),
 	unboundSchema.merge(z.object({ apiProvider: z.literal("unbound") })),
 	requestySchema.merge(z.object({ apiProvider: z.literal("requesty") })),
 	humanRelaySchema.merge(z.object({ apiProvider: z.literal("human-relay") })),
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
+	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })), // kilocode_change
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })), // kilocode_change
 	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })), // kilocode_change
+	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })), // kilocode_change
 	defaultSchema,
 ])
 
@@ -298,21 +350,25 @@ export const providerSettingsSchema = z.object({
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
 	...geminiCliSchema.shape, // kilocode_change
+	...geminiFjSchema.shape, // kilocode_change
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,
+	...moonshotSchema.shape,
 	...unboundSchema.shape,
 	...requestySchema.shape,
 	...humanRelaySchema.shape,
 	...fakeAiSchema.shape,
 	...xaiSchema.shape,
 	...groqSchema.shape,
+	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 	...kilocodeSchema.shape, // kilocode_change
 	...fireworksSchema.shape, // kilocode_change
 	...cerebrasSchema.shape, // kilocode_change
+	...virtualQuotaFallbackSchema.shape, // kilocode_change
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -330,6 +386,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"requestyModelId",
 	"litellmModelId",
 	"cerebrasModelId", // kilocode_change
+	"huggingFaceModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -338,9 +395,20 @@ export const getModelId = (settings: ProviderSettings): string | undefined => {
 }
 
 // Providers that use Anthropic-style API protocol
-export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code"]
+export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code", "bedrock"]
 
-// Helper function to determine API protocol for a provider
-export const getApiProtocol = (provider: ProviderName | undefined): "anthropic" | "openai" => {
-	return provider && ANTHROPIC_STYLE_PROVIDERS.includes(provider) ? "anthropic" : "openai"
+// Helper function to determine API protocol for a provider and model
+export const getApiProtocol = (provider: ProviderName | undefined, modelId?: string): "anthropic" | "openai" => {
+	// First check if the provider is an Anthropic-style provider
+	if (provider && ANTHROPIC_STYLE_PROVIDERS.includes(provider)) {
+		return "anthropic"
+	}
+
+	// For vertex provider, check if the model ID contains "claude" (case-insensitive)
+	if (provider && provider === "vertex" && modelId && modelId.toLowerCase().includes("claude")) {
+		return "anthropic"
+	}
+
+	// Default to OpenAI protocol
+	return "openai"
 }

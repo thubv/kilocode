@@ -72,7 +72,7 @@ export const ModelInfoView = ({
 				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1M tokens
 			</>
 		),
-		apiProvider === "gemini" && (
+		(apiProvider === "gemini" || apiProvider === "gemini-fj") && (
 			<span className="italic">
 				{selectedModelId.includes("pro-preview")
 					? t("settings:modelInfo.gemini.billingEstimate")

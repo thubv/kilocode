@@ -18,13 +18,16 @@ import {
 	claudeCodeDefaultModelId,
 	geminiDefaultModelId,
 	geminiCliDefaultModelId,
+	geminiFjDefaultModelId,
 	deepSeekDefaultModelId,
+	moonshotDefaultModelId,
 	mistralDefaultModelId,
 	xaiDefaultModelId,
 	groqDefaultModelId,
 	chutesDefaultModelId,
 	bedrockDefaultModelId,
 	vertexDefaultModelId,
+	kilocodeDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -59,11 +62,14 @@ import {
 	DeepSeek,
 	Gemini,
 	GeminiCli,
+	GeminiFj,
 	Glama,
 	Groq,
+	HuggingFace,
 	LMStudio,
 	LiteLLM,
 	Mistral,
+	Moonshot,
 	Ollama,
 	OpenAI,
 	OpenAICompatible,
@@ -74,6 +80,7 @@ import {
 	VSCodeLM,
 	XAI,
 	Cerebras, // kilocode_change
+	VirtualQuotaFallbackProvider, // kilocode_change
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -311,7 +318,9 @@ const ApiOptions = ({
 				"openai-native": { field: "apiModelId", default: openAiNativeDefaultModelId },
 				gemini: { field: "apiModelId", default: geminiDefaultModelId },
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
+				"gemini-fj": { field: "apiModelId", default: geminiFjDefaultModelId },
 				deepseek: { field: "apiModelId", default: deepSeekDefaultModelId },
+				moonshot: { field: "apiModelId", default: moonshotDefaultModelId },
 				mistral: { field: "apiModelId", default: mistralDefaultModelId },
 				xai: { field: "apiModelId", default: xaiDefaultModelId },
 				groq: { field: "apiModelId", default: groqDefaultModelId },
@@ -321,7 +330,7 @@ const ApiOptions = ({
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
-				kilocode: { field: "kilocodeModel", default: "claude37" }, // kilocode_change
+				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModelId }, // kilocode_change
 				cerebras: { field: "cerebrasModelId", default: cerebrasDefaultModelId }, // kilocode_change
 			}
 
@@ -348,6 +357,16 @@ const ApiOptions = ({
 		if (!name) {
 			return undefined
 		}
+		
+		{/* kilocode_change start */}
+		// Providers that don't have documentation pages yet
+		const excludedProviders = ["fireworks", "gemini-cli", "moonshot", "chutes", "cerebras", "virtual-quota-fallback", "litellm"]
+
+		// Skip documentation link when the provider is excluded because documentation is not available
+		if (excludedProviders.includes(selectedProvider)) {
+			return undefined
+		}
+		{/* kilocode_change end */}
 
 		// Get the URL slug - use custom mapping if available, otherwise use the provider key.
 		const slugs: Record<string, string> = {
@@ -519,6 +538,10 @@ const ApiOptions = ({
 				<GeminiCli apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
+			{selectedProvider === "gemini-fj" && (
+				<GeminiFj apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
 			{selectedProvider === "openai" && (
 				<OpenAICompatible
 					apiConfiguration={apiConfiguration}
@@ -534,6 +557,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "deepseek" && (
 				<DeepSeek apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "moonshot" && (
+				<Moonshot apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "vscode-lm" && (
@@ -552,6 +579,10 @@ const ApiOptions = ({
 				<Groq apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
+			{selectedProvider === "huggingface" && (
+				<HuggingFace apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
 			{selectedProvider === "chutes" && (
 				<Chutes apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
@@ -559,6 +590,12 @@ const ApiOptions = ({
 			{/* kilocode_change start */}
 			{selectedProvider === "cerebras" && (
 				<Cerebras apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+			{selectedProvider === "virtual-quota-fallback" && (
+				<VirtualQuotaFallbackProvider
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+				/>
 			)}
 			{/* kilocode_change end */}
 
