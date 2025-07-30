@@ -28,6 +28,7 @@ import {
 	FakeAIHandler,
 	XAIHandler,
 	GroqHandler,
+	HuggingFaceHandler,
 	ChutesHandler,
 	LiteLLMHandler,
 	CerebrasHandler, // kilocode_change
@@ -131,6 +132,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new XAIHandler(options)
 		case "groq":
 			return new GroqHandler(options)
+		case "huggingface":
+			return new HuggingFaceHandler(options)
 		case "chutes":
 			return new ChutesHandler(options)
 		case "litellm":
