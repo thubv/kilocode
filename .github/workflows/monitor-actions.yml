@@ -1,0 +1,219 @@
+name: Monitor GitHub Actions
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: 'Hours to look back for workflow runs'
+        required: false
+        default: '24'
+        type: string
+      auto_fix:
+        description: 'Automatically apply fixes for known issues'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/actions-monitor.py
+          chmod +x scripts/auto-fix.py
+      
+      - name: Run workflow monitor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          cd scripts
+          python actions-monitor.py
+          
+          # Move results to root for artifact upload
+          mv workflow-monitor-results.json ../
+          mv workflow-monitor-report.md ../
+      
+      - name: Apply auto-fixes (if enabled)
+        if: ${{ github.event.inputs.auto_fix != 'false' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd scripts
+          python auto-fix.py ../workflow-monitor-results.json > ../auto-fix-results.txt 2>&1 || true
+      
+      - name: Configure Git for auto-fixes
+        if: ${{ github.event.inputs.auto_fix != 'false' }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Check for errors and create issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if there are any errors in the results
+          if [ -f workflow-monitor-results.json ]; then
+            error_count=$(python -c "
+            import json
+            with open('workflow-monitor-results.json', 'r') as f:
+                data = json.load(f)
+            print(len(data.get('errors_found', [])))
+            ")
+            
+            if [ "$error_count" -gt 0 ]; then
+              echo "Found $error_count errors. Creating/updating issue..."
+              
+              # Create issue body
+              cat > issue-body.md << 'EOF'
+          # 🚨 GitHub Actions Monitoring Alert
+          
+          Automated monitoring has detected workflow failures that need attention.
+          
+          ## 📊 Summary
+          EOF
+              
+              # Add summary from report
+              if [ -f workflow-monitor-report.md ]; then
+                cat workflow-monitor-report.md >> issue-body.md
+              fi
+              
+              # Add auto-fix results if available
+              if [ -f auto-fix-results.txt ]; then
+                echo "" >> issue-body.md
+                echo "## 🔧 Auto-Fix Results" >> issue-body.md
+                echo '```' >> issue-body.md
+                cat auto-fix-results.txt >> issue-body.md
+                echo '```' >> issue-body.md
+              fi
+              
+              # Add footer
+              cat >> issue-body.md << 'EOF'
+          
+          ---
+          
+          **🤖 This issue was automatically created by the GitHub Actions Monitor**
+          
+          - **Repository:** ${{ github.repository }}
+          - **Monitoring Run:** ${{ github.run_id }}
+          - **Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          ### 📋 Next Steps:
+          1. Review the errors listed above
+          2. Check the workflow runs for detailed logs
+          3. Apply manual fixes for non-auto-fixable issues
+          4. Monitor the next automated run to verify fixes
+          
+          ### 🔄 Auto-Monitoring:
+          This monitoring runs every 6 hours. The issue will be updated with new findings.
+          EOF
+              
+              # Check if monitoring issue already exists
+              existing_issue=$(gh issue list --label "automated-monitoring" --state open --json number --jq '.[0].number' || echo "")
+              
+              if [ -n "$existing_issue" ]; then
+                echo "Updating existing issue #$existing_issue"
+                gh issue edit "$existing_issue" --body-file issue-body.md
+                gh issue comment "$existing_issue" --body "🔄 **Monitoring Update:** Found $error_count new errors. Issue updated with latest findings."
+              else
+                echo "Creating new monitoring issue"
+                gh issue create \
+                  --title "🚨 GitHub Actions Monitoring Alert - $error_count Errors Detected" \
+                  --body-file issue-body.md \
+                  --label "automated-monitoring,bug,github-actions"
+              fi
+            else
+              echo "No errors found. Checking if we should close existing issue..."
+              
+              existing_issue=$(gh issue list --label "automated-monitoring" --state open --json number --jq '.[0].number' || echo "")
+              
+              if [ -n "$existing_issue" ]; then
+                echo "Closing resolved monitoring issue #$existing_issue"
+                gh issue comment "$existing_issue" --body "✅ **All Clear!** No workflow errors detected in the latest monitoring run. Closing this issue."
+                gh issue close "$existing_issue"
+              fi
+            fi
+          fi
+      
+      - name: Upload monitoring artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monitoring-results-${{ github.run_id }}
+          path: |
+            workflow-monitor-results.json
+            workflow-monitor-report.md
+            auto-fix-results.txt
+          retention-days: 30
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🔍 Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f workflow-monitor-results.json ]; then
+            total_runs=$(python -c "
+            import json
+            with open('workflow-monitor-results.json', 'r') as f:
+                data = json.load(f)
+            print(data.get('total_runs', 0))
+            ")
+            
+            failed_runs=$(python -c "
+            import json
+            with open('workflow-monitor-results.json', 'r') as f:
+                data = json.load(f)
+            print(data.get('failed_runs', 0))
+            ")
+            
+            error_count=$(python -c "
+            import json
+            with open('workflow-monitor-results.json', 'r') as f:
+                data = json.load(f)
+            print(len(data.get('errors_found', [])))
+            ")
+            
+            echo "- **Total Runs Analyzed:** $total_runs" >> $GITHUB_STEP_SUMMARY
+            echo "- **Failed Runs:** $failed_runs" >> $GITHUB_STEP_SUMMARY
+            echo "- **Errors Found:** $error_count" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$error_count" -gt 0 ]; then
+              echo "- **Status:** ❌ Issues detected" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- **Status:** ✅ All workflows healthy" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **Status:** ⚠️ Monitoring failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Full Report:** Check the uploaded artifacts for detailed analysis" >> $GITHUB_STEP_SUMMARY

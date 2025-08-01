@@ -1,0 +1,158 @@
+{
+	"tag_conflicts": {
+		"description": "Git tag conflicts when fetching from upstream",
+		"patterns": [
+			"\\[rejected\\].*would clobber existing tag",
+			"! \\[rejected\\].*\\(would clobber existing tag\\)",
+			"error: failed to push some refs.*tag.*already exists"
+		],
+		"fix": "Add --force flag to git fetch and push commands for tags",
+		"auto_fixable": true,
+		"workflow_fixes": {
+			"auto-sync-upstream.yml": {
+				"search": "git fetch upstream --tags",
+				"replace": "git fetch upstream --tags --force || { echo \"Warning: Some tags could not be fetched, continuing...\"; }"
+			}
+		}
+	},
+	"missing_environment_variable": {
+		"description": "Required environment variable is not set",
+		"patterns": [
+			"environment variable is not set",
+			"Please set it with: export.*=",
+			"Error:.*API_KEY.*not found",
+			"Missing required environment variable"
+		],
+		"fix": "Add the missing environment variable to GitHub repository secrets",
+		"auto_fixable": false,
+		"manual_steps": [
+			"Go to GitHub repository Settings",
+			"Navigate to Secrets and variables > Actions",
+			"Click 'New repository secret'",
+			"Add the required secret name and value"
+		]
+	},
+	"node_modules_cache_issue": {
+		"description": "Node modules cache corruption or dependency issues",
+		"patterns": [
+			"npm ERR! peer dep missing",
+			"Module not found.*node_modules",
+			"Cannot resolve dependency",
+			"ENOENT: no such file or directory.*node_modules"
+		],
+		"fix": "Clear cache and reinstall dependencies",
+		"auto_fixable": true,
+		"workflow_fixes": {
+			"build-extension.yml": {
+				"add_step": {
+					"name": "Clear npm cache",
+					"run": "npm cache clean --force",
+					"position": "before_install"
+				}
+			}
+		}
+	},
+	"permission_denied": {
+		"description": "Permission denied errors in workflows",
+		"patterns": [
+			"Permission denied",
+			"EACCES: permission denied",
+			"fatal: could not read Username",
+			"remote: Permission to.*denied"
+		],
+		"fix": "Check repository permissions and GitHub token scopes",
+		"auto_fixable": false,
+		"manual_steps": [
+			"Verify GITHUB_TOKEN has required permissions",
+			"Check repository settings for Actions permissions",
+			"Ensure workflow has correct permissions block"
+		]
+	},
+	"build_timeout": {
+		"description": "Build process timeout",
+		"patterns": [
+			"The job running on runner.*has exceeded the maximum execution time",
+			"timeout.*exceeded",
+			"Process terminated due to timeout"
+		],
+		"fix": "Increase timeout or optimize build process",
+		"auto_fixable": true,
+		"workflow_fixes": {
+			"build-extension.yml": {
+				"add_timeout": "timeout-minutes: 30"
+			}
+		}
+	},
+	"disk_space_full": {
+		"description": "Insufficient disk space on runner",
+		"patterns": ["No space left on device", "ENOSPC: no space left on device", "disk space.*full"],
+		"fix": "Clean up disk space or use larger runner",
+		"auto_fixable": true,
+		"workflow_fixes": {
+			"build-extension.yml": {
+				"add_step": {
+					"name": "Free disk space",
+					"run": "sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc",
+					"position": "before_install"
+				}
+			}
+		}
+	},
+	"network_timeout": {
+		"description": "Network timeout or connection issues",
+		"patterns": ["connect ETIMEDOUT", "network timeout", "Request timeout", "getaddrinfo ENOTFOUND"],
+		"fix": "Retry with exponential backoff or use different registry",
+		"auto_fixable": true,
+		"workflow_fixes": {
+			"build-extension.yml": {
+				"add_retry": {
+					"uses": "nick-invision/retry@v2",
+					"with": {
+						"timeout_minutes": 10,
+						"max_attempts": 3,
+						"command": "npm install"
+					}
+				}
+			}
+		}
+	},
+	"test_failures": {
+		"description": "Test suite failures",
+		"patterns": ["Test suite failed to run", "Tests failed", "\\d+ failing", "AssertionError", "Expected.*but got"],
+		"fix": "Review test failures and fix failing tests",
+		"auto_fixable": false,
+		"manual_steps": [
+			"Review test output for specific failures",
+			"Run tests locally to reproduce issues",
+			"Fix failing test cases",
+			"Update test expectations if needed"
+		]
+	},
+	"docker_issues": {
+		"description": "Docker container or image issues",
+		"patterns": [
+			"docker: Error response from daemon",
+			"pull access denied",
+			"manifest unknown",
+			"container.*failed to start"
+		],
+		"fix": "Check Docker image availability and permissions",
+		"auto_fixable": false,
+		"manual_steps": [
+			"Verify Docker image exists and is accessible",
+			"Check Docker registry permissions",
+			"Update Docker image tag if needed"
+		]
+	},
+	"syntax_errors": {
+		"description": "Code syntax errors preventing build",
+		"patterns": ["SyntaxError:", "Unexpected token", "Parse error", "Invalid syntax"],
+		"fix": "Fix syntax errors in the code",
+		"auto_fixable": false,
+		"manual_steps": [
+			"Review syntax error details",
+			"Fix syntax issues in the affected files",
+			"Run linter to catch additional issues"
+		]
+	}
+}
