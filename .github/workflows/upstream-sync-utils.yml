@@ -1,0 +1,324 @@
+name: Upstream Sync Utilities
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - 'check-upstream'
+          - 'force-sync'
+          - 'resolve-conflicts'
+          - 'rollback-sync'
+          - 'create-sync-pr'
+        default: 'check-upstream'
+      upstream_repo:
+        description: 'Upstream repository (owner/repo)'
+        required: false
+        default: 'Kilo-Org/kilocode'
+        type: string
+      target_branch:
+        description: 'Target branch'
+        required: false
+        default: 'main'
+        type: string
+      conflict_resolution:
+        description: 'Conflict resolution strategy'
+        required: false
+        type: choice
+        options:
+          - 'ours'
+          - 'theirs'
+          - 'manual'
+        default: 'manual'
+
+env:
+  NODE_VERSION: 20.19.2
+  PNPM_VERSION: 10.8.1
+  UPSTREAM_REPO: ${{ github.event.inputs.upstream_repo || 'Kilo-Org/kilocode' }}
+  TARGET_BRANCH: ${{ github.event.inputs.target_branch || 'main' }}
+
+jobs:
+  upstream-utils:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Setup upstream remote
+        run: |
+          git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git || true
+          git remote set-url upstream https://github.com/${{ env.UPSTREAM_REPO }}.git
+          git fetch upstream
+          git fetch upstream --tags
+          
+      - name: Check Upstream Status
+        if: github.event.inputs.action == 'check-upstream'
+        run: |
+          echo "## 🔍 Upstream Status Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get current and upstream commits
+          current_commit=$(git rev-parse HEAD)
+          upstream_commit=$(git rev-parse upstream/${{ env.TARGET_BRANCH }})
+          
+          echo "**Current commit**: \`$current_commit\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Upstream commit**: \`$upstream_commit\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$current_commit" = "$upstream_commit" ]; then
+            echo "✅ **Status**: Up to date with upstream" >> $GITHUB_STEP_SUMMARY
+          else
+            # Count commits behind
+            commits_behind=$(git rev-list --count HEAD..upstream/${{ env.TARGET_BRANCH }})
+            commits_ahead=$(git rev-list --count upstream/${{ env.TARGET_BRANCH }}..HEAD)
+            
+            echo "📊 **Status**: Out of sync" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commits behind**: $commits_behind" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commits ahead**: $commits_ahead" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Show recent upstream commits
+            echo "### Recent Upstream Commits:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            git log --oneline upstream/${{ env.TARGET_BRANCH }} -10 >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            
+            # Check for potential conflicts
+            git checkout ${{ env.TARGET_BRANCH }}
+            if git merge --no-commit --no-ff upstream/${{ env.TARGET_BRANCH }} 2>/dev/null; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "✅ **Merge Status**: No conflicts detected" >> $GITHUB_STEP_SUMMARY
+              git merge --abort
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ **Merge Status**: Potential conflicts detected" >> $GITHUB_STEP_SUMMARY
+              git merge --abort
+            fi
+          fi
+          
+      - name: Force Sync
+        if: github.event.inputs.action == 'force-sync'
+        run: |
+          echo "🚀 Performing force sync with upstream..."
+          
+          git checkout ${{ env.TARGET_BRANCH }}
+          
+          # Create backup branch
+          backup_branch="backup-before-force-sync-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $backup_branch
+          git push origin $backup_branch
+          echo "Created backup branch: $backup_branch"
+          
+          # Return to target branch and force sync
+          git checkout ${{ env.TARGET_BRANCH }}
+          
+          if [ "${{ github.event.inputs.conflict_resolution }}" = "theirs" ]; then
+            echo "Using 'theirs' strategy - accepting all upstream changes"
+            git merge -X theirs upstream/${{ env.TARGET_BRANCH }}
+          elif [ "${{ github.event.inputs.conflict_resolution }}" = "ours" ]; then
+            echo "Using 'ours' strategy - keeping our changes"
+            git merge -X ours upstream/${{ env.TARGET_BRANCH }}
+          else
+            echo "Manual conflict resolution required"
+            git merge upstream/${{ env.TARGET_BRANCH }} || {
+              echo "Conflicts detected. Please resolve manually."
+              git status
+              exit 1
+            }
+          fi
+          
+          # Push changes
+          git push origin ${{ env.TARGET_BRANCH }}
+          git push origin --tags
+          
+          echo "## 🚀 Force Sync Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Backup Branch**: \`$backup_branch\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Strategy**: ${{ github.event.inputs.conflict_resolution }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ✅ Sync completed successfully" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Create Sync PR
+        if: github.event.inputs.action == 'create-sync-pr'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📝 Creating sync PR..."
+          
+          # Create sync branch
+          sync_branch="upstream-sync-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $sync_branch
+          
+          # Merge upstream
+          git merge upstream/${{ env.TARGET_BRANCH }} || {
+            echo "Conflicts detected in PR creation"
+            conflicted_files=$(git diff --name-only --diff-filter=U | tr '\n' ',' | sed 's/,$//')
+            
+            # Create PR with conflict info
+            pr_body="## 🔄 Upstream Sync PR
+            
+            This PR syncs changes from upstream repository: \`${{ env.UPSTREAM_REPO }}\`
+            
+            ⚠️ **Conflicts Detected**: This PR contains merge conflicts that need manual resolution.
+            
+            ### Conflicted Files:
+            \`\`\`
+            $conflicted_files
+            \`\`\`
+            
+            ### Resolution Steps:
+            1. Checkout this branch: \`git checkout $sync_branch\`
+            2. Resolve conflicts in the files above
+            3. Add resolved files: \`git add .\`
+            4. Commit changes: \`git commit -m 'Resolve merge conflicts'\`
+            5. Push changes: \`git push origin $sync_branch\`
+            
+            ### Auto-generated by Upstream Sync Utilities workflow"
+            
+            git add .
+            git commit -m "WIP: Upstream sync with conflicts"
+            git push origin $sync_branch
+            
+            gh pr create \
+              --title "🔄 Upstream Sync - $(date '+%Y-%m-%d')" \
+              --body "$pr_body" \
+              --base ${{ env.TARGET_BRANCH }} \
+              --head $sync_branch \
+              --label "upstream-sync,conflicts"
+              
+            echo "Created PR with conflicts for manual resolution"
+            exit 0
+          }
+          
+          # No conflicts - create clean PR
+          git push origin $sync_branch
+          
+          # Get version info
+          new_version=$(node -p "require('./src/package.json').version" 2>/dev/null || echo "unknown")
+          
+          pr_body="## 🔄 Upstream Sync PR
+          
+          This PR syncs the latest changes from upstream repository: \`${{ env.UPSTREAM_REPO }}\`
+          
+          ### Changes:
+          - Updated to version: \`$new_version\`
+          - Synced all upstream commits
+          - No merge conflicts detected
+          
+          ### Verification:
+          - [ ] Extension builds successfully
+          - [ ] All tests pass
+          - [ ] No breaking changes
+          
+          ### Auto-generated by Upstream Sync Utilities workflow
+          **Sync Date**: $(date '+%Y-%m-%d %H:%M:%S')
+          **Workflow**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          gh pr create \
+            --title "🔄 Upstream Sync v$new_version - $(date '+%Y-%m-%d')" \
+            --body "$pr_body" \
+            --base ${{ env.TARGET_BRANCH }} \
+            --head $sync_branch \
+            --label "upstream-sync,automated"
+            
+          echo "## 📝 Sync PR Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: \`$sync_branch\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: \`$new_version\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ✅ No conflicts detected" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Rollback Sync
+        if: github.event.inputs.action == 'rollback-sync'
+        run: |
+          echo "🔄 Rolling back last sync..."
+          
+          # Find backup branches
+          backup_branches=$(git branch -r | grep "origin/backup-before" | head -5)
+          
+          if [ -z "$backup_branches" ]; then
+            echo "No backup branches found"
+            echo "## ❌ Rollback Failed" >> $GITHUB_STEP_SUMMARY
+            echo "No backup branches available for rollback" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          echo "Available backup branches:"
+          echo "$backup_branches"
+          
+          # Use the most recent backup
+          latest_backup=$(echo "$backup_branches" | head -1 | sed 's/origin\///' | xargs)
+          
+          echo "Rolling back to: $latest_backup"
+          
+          git checkout ${{ env.TARGET_BRANCH }}
+          git reset --hard origin/$latest_backup
+          git push --force-with-lease origin ${{ env.TARGET_BRANCH }}
+          
+          echo "## 🔄 Rollback Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Restored from**: \`$latest_backup\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ✅ Rollback successful" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Resolve Conflicts Helper
+        if: github.event.inputs.action == 'resolve-conflicts'
+        run: |
+          echo "🔧 Conflict Resolution Helper"
+          
+          git checkout ${{ env.TARGET_BRANCH }}
+          
+          # Try merge to see current conflicts
+          if git merge upstream/${{ env.TARGET_BRANCH }}; then
+            echo "No conflicts found - merge successful"
+            git push origin ${{ env.TARGET_BRANCH }}
+            git push origin --tags
+            
+            echo "## ✅ No Conflicts Found" >> $GITHUB_STEP_SUMMARY
+            echo "Merge completed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            conflicted_files=$(git diff --name-only --diff-filter=U)
+            
+            echo "## ⚠️ Conflicts Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Conflicted Files:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$conflicted_files" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Resolution Commands:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "git checkout ${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
+            echo "git merge upstream/${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
+            echo "# Edit conflicted files above" >> $GITHUB_STEP_SUMMARY
+            echo "git add ." >> $GITHUB_STEP_SUMMARY
+            echo "git commit -m 'Resolve merge conflicts'" >> $GITHUB_STEP_SUMMARY
+            echo "git push origin ${{ env.TARGET_BRANCH }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            
+            # Apply automatic resolution if specified
+            if [ "${{ github.event.inputs.conflict_resolution }}" != "manual" ]; then
+              echo "Applying automatic resolution: ${{ github.event.inputs.conflict_resolution }}"
+              
+              git checkout --${{ github.event.inputs.conflict_resolution }} .
+              git add .
+              git commit -m "Auto-resolve conflicts using ${{ github.event.inputs.conflict_resolution }} strategy"
+              git push origin ${{ env.TARGET_BRANCH }}
+              
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "✅ **Auto-resolved** using \`${{ github.event.inputs.conflict_resolution }}\` strategy" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
