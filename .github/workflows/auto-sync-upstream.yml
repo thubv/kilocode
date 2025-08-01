@@ -74,9 +74,12 @@ jobs:
 
           # Fetch tags với --force để ghi đè tags bị conflict
           echo "Fetching tags from upstream..."
-          git fetch upstream --tags --force || {
-            echo "Warning: Some tags could not be fetched, continuing..."
-          }
+          if ! git fetch upstream --tags; then
+            echo "Warning: Tag conflicts detected, fetching with --force..."
+            git fetch upstream --tags --force || {
+              echo "Warning: Some tags could not be fetched, continuing..."
+            }
+          fi
 
           # Kiểm tra có thay đổi mới không
           current_commit=$(git rev-parse HEAD)
