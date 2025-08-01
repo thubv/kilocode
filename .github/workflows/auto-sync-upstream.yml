@@ -71,15 +71,20 @@ jobs:
         run: |
           echo "Fetching from upstream..."
           git fetch upstream
-          git fetch upstream --tags
-          
+
+          # Fetch tags với --force để ghi đè tags bị conflict
+          echo "Fetching tags from upstream..."
+          git fetch upstream --tags --force || {
+            echo "Warning: Some tags could not be fetched, continuing..."
+          }
+
           # Kiểm tra có thay đổi mới không
           current_commit=$(git rev-parse HEAD)
           upstream_commit=$(git rev-parse upstream/${{ env.TARGET_BRANCH }})
-          
+
           echo "Current commit: $current_commit"
           echo "Upstream commit: $upstream_commit"
-          
+
           if [ "$current_commit" = "$upstream_commit" ]; then
             echo "No new changes from upstream"
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -178,7 +183,12 @@ jobs:
             
             # Push changes
             git push origin ${{ env.TARGET_BRANCH }}
-            git push origin --tags
+
+            # Push tags với --force để ghi đè tags bị conflict
+            echo "Pushing tags to origin..."
+            git push origin --tags --force || {
+              echo "Warning: Some tags could not be pushed, continuing..."
+            }
             
             echo "Pushed changes to origin"
           else
