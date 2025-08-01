@@ -83,12 +83,7 @@ jobs:
         run: |
           # Check if there are any errors in the results
           if [ -f workflow-monitor-results.json ]; then
-            error_count=$(python -c "
-            import json
-            with open('workflow-monitor-results.json', 'r') as f:
-                data = json.load(f)
-            print(len(data.get('errors_found', [])))
-            ")
+            error_count=$(python -c "import json; data=json.load(open('workflow-monitor-results.json')); print(len(data.get('errors_found', [])))")
             
             if [ "$error_count" -gt 0 ]; then
               echo "Found $error_count errors. Creating/updating issue..."
@@ -181,26 +176,11 @@ jobs:
           echo "## 🔍 Monitoring Summary" >> $GITHUB_STEP_SUMMARY
           
           if [ -f workflow-monitor-results.json ]; then
-            total_runs=$(python -c "
-            import json
-            with open('workflow-monitor-results.json', 'r') as f:
-                data = json.load(f)
-            print(data.get('total_runs', 0))
-            ")
-            
-            failed_runs=$(python -c "
-            import json
-            with open('workflow-monitor-results.json', 'r') as f:
-                data = json.load(f)
-            print(data.get('failed_runs', 0))
-            ")
-            
-            error_count=$(python -c "
-            import json
-            with open('workflow-monitor-results.json', 'r') as f:
-                data = json.load(f)
-            print(len(data.get('errors_found', [])))
-            ")
+            total_runs=$(python -c "import json; data=json.load(open('workflow-monitor-results.json')); print(data.get('total_runs', 0))")
+
+            failed_runs=$(python -c "import json; data=json.load(open('workflow-monitor-results.json')); print(data.get('failed_runs', 0))")
+
+            error_count=$(python -c "import json; data=json.load(open('workflow-monitor-results.json')); print(len(data.get('errors_found', [])))")
             
             echo "- **Total Runs Analyzed:** $total_runs" >> $GITHUB_STEP_SUMMARY
             echo "- **Failed Runs:** $failed_runs" >> $GITHUB_STEP_SUMMARY
