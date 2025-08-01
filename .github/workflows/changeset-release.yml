@@ -15,13 +15,8 @@ env:
 jobs:
     # Job 1: Create version bump PR when changesets are merged to main
     changeset-pr-version-bump:
-        if: >
-            ( github.event_name == 'pull_request' &&
-            github.event.pull_request.merged == true &&
-            github.event.pull_request.base.ref == 'main' &&
-            !contains(github.event.pull_request.title, 'Changeset version bump') &&
-            github.actor != 'kilocode-bot' ) ||
-            github.event_name == 'workflow_dispatch'
+        # DISABLED - Only keep build and sync workflows
+        if: false
         runs-on: ubuntu-latest
         permissions:
             contents: write

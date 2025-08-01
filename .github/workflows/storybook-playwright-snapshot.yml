@@ -21,6 +21,7 @@ env:
 
 jobs:
     storybook-playwright-snapshot:
+        if: false # DISABLED - Only keep build and sync workflows
         runs-on: ubuntu-latest
         timeout-minutes: 45
 
