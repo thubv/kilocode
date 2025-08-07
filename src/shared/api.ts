@@ -10,117 +10,106 @@ import {
 export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider">
 
 // kilocode_change start
-// Fireworks
-// https://fireworks.ai/models
-// TODO: Add support for all Fireworks models, currently only supports DeepSeek's serverless models
-
-export const fireworksModels = {
-	"accounts/fireworks/models/deepseek-r1": {
-		maxTokens: 16384,
-		contextWindow: 160000,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 3.0,
-		outputPrice: 8.0,
-	},
-
-	"accounts/fireworks/models/deepseek-v3": {
-		maxTokens: 16384,
-		contextWindow: 128_000,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 0.9,
-		outputPrice: 0.9,
-	},
-
-	"accounts/fireworks/models/llama4-scout-instruct-basic": {
-		maxTokens: 16_384,
-		contextWindow: 128_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.15,
-		outputPrice: 0.6,
-	},
-
-	"accounts/fireworks/models/llama4-maverick-instruct-basic": {
-		maxTokens: 16_384,
-		contextWindow: 1_000_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.22,
-		outputPrice: 0.88,
-	},
-} as const satisfies Record<string, ModelInfo>
-
-export type FireworksModelId = keyof typeof fireworksModels
-export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"
-// kilocode_change end
-
-// kilocode_change start
 // Cerebras
 // https://inference-docs.cerebras.ai/api-reference/models
 
-// Cerebras AI Inference Model Definitions - Updated July 2025
+// Cerebras AI Inference Model Definitions - Updated August 2025
 
 export const cerebrasModels = {
-	"qwen-3-coder-480b-free": {
-		maxTokens: 40000,
-		contextWindow: 64000,
+	"gpt-oss-120b": {
+		maxTokens: 65536,
+		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "SOTA coding model with ~2000 tokens/s (free tier)",
+		inputPrice: 0.25,
+		outputPrice: 0.69,
+		description: "OpenAI's GPT-OSS model with ~3000 tokens/s",
 	},
-	"qwen-3-coder-480b": {
-		maxTokens: 40000,
-		contextWindow: 128000,
+	"llama-4-scout-17b-16e-instruct": {
+		maxTokens: 8192,
+		contextWindow: 8192,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "SOTA coding model with ~2000 tokens/s",
+		inputPrice: 0.65,
+		outputPrice: 0.85,
+		description: "Llama 4 Scout with ~2600 tokens/s",
 	},
-	"qwen-3-235b-a22b-instruct-2507": {
-		maxTokens: 20000,
-		contextWindow: 20000,
+	"llama-4-maverick-17b-128e-instruct": {
+		maxTokens: 8192,
+		contextWindow: 8192,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Intelligent model with ~1400 tokens/s",
+		inputPrice: 0.2,
+		outputPrice: 0.6,
+		description: "Llama 4 Maverick with ~1500 tokens/s",
+	},
+	"llama3.1-8b": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.1,
+		outputPrice: 0.1,
+		description: "Fast and efficient model with ~2200 tokens/s",
 	},
 	"llama-3.3-70b": {
-		maxTokens: 64000,
-		contextWindow: 64000,
+		maxTokens: 65536,
+		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Powerful model with ~2600 tokens/s",
+		inputPrice: 0.85,
+		outputPrice: 1.2,
+		description: "Powerful model with ~2100 tokens/s",
 	},
 	"qwen-3-32b": {
+		maxTokens: 65536,
+		contextWindow: 65536,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.4,
+		outputPrice: 0.8,
+		description: "SOTA coding performance with ~2600 tokens/s",
+	},
+	"qwen-3-235b-a22b-instruct-2507": {
 		maxTokens: 64000,
 		contextWindow: 64000,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "SOTA coding performance with ~2500 tokens/s",
+		inputPrice: 0.6,
+		outputPrice: 1.2,
+		description: "Intelligent model with ~1400 tokens/s",
 	},
 	"qwen-3-235b-a22b-thinking-2507": {
-		maxTokens: 32000,
-		contextWindow: 65000,
+		maxTokens: 65536,
+		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "SOTA performance with ~1500 tokens/s",
+		inputPrice: 0.6,
+		outputPrice: 1.2,
+		description: "SOTA performance with ~1700 tokens/s",
+	},
+	"qwen-3-coder-480b": {
+		maxTokens: 65536,
+		contextWindow: 65536,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 2.0,
+		description: "SOTA coding model with ~2000 tokens/s",
+	},
+	"deepseek-r1-distill-llama-70b": {
+		maxTokens: 65536,
+		contextWindow: 65536,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 2.2,
+		outputPrice: 2.5,
+		description: "Deepseek R1 Distill with ~2600 tokens/s",
 	},
 } as const satisfies Record<string, ModelInfo>
 
 export type CerebrasModelId = keyof typeof cerebrasModels
-export const cerebrasDefaultModelId: CerebrasModelId = "qwen-3-coder-480b-free"
+export const cerebrasDefaultModelId: CerebrasModelId = "gpt-oss-120b"
 
 // kilocode_change end
 
