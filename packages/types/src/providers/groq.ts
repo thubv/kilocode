@@ -100,7 +100,7 @@ export const groqModels = {
 		description: "Moonshot AI Kimi K2 Instruct 1T model, 128K context.",
 	},
 	"openai/gpt-oss-120b": {
-		maxTokens: 32768,
+		maxTokens: 32766,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
