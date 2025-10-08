@@ -659,6 +659,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	lmstudio: "lmStudioModelId",
 	gemini: "apiModelId",
 	"gemini-cli": "apiModelId",
+	"gemini-fj": "apiModelId", // kilocode_change
 	mistral: "apiModelId",
 	moonshot: "apiModelId",
 	deepseek: "apiModelId",
@@ -715,7 +716,7 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
+	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "gemini-fj" | "lmstudio" | "openai" | "ollama">,
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
