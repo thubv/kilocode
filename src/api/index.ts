@@ -13,7 +13,6 @@ import {
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
-	// OllamaHandler, // kilocode_change
 	LmStudioHandler,
 	GeminiHandler,
 	GeminiCliHandler, // kilocode_change
@@ -28,22 +27,32 @@ import {
 	HumanRelayHandler,
 	FakeAIHandler,
 	XAIHandler,
-	BigModelHandler, // kilocode_change
 	GroqHandler,
 	HuggingFaceHandler,
 	ChutesHandler,
 	LiteLLMHandler,
-	VirtualQuotaFallbackHandler, // kilocode_change
+	// kilocode_change start
+	VirtualQuotaFallbackHandler,
+	GeminiCliHandler,
+	// kilocode_change end
 	ClaudeCodeHandler,
+	QwenCodeHandler,
 	SambaNovaHandler,
+	IOIntelligenceHandler,
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
+	SyntheticHandler, // kilocode_change
+	RooHandler,
+	FeatherlessHandler,
+	VercelAiGatewayHandler,
+	DeepInfraHandler,
+	OVHCloudAIEndpointsHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
-import { KilocodeOllamaHandler } from "./providers/kilocode-ollama"
 // kilocode_change end
+import { NativeOllamaHandler } from "./providers/native-ollama"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -52,6 +61,21 @@ export interface SingleCompletionHandler {
 export interface ApiHandlerCreateMessageMetadata {
 	mode?: string
 	taskId: string
+	previousResponseId?: string
+	/**
+	 * When true, the provider must NOT fall back to internal continuity state
+	 * (e.g., lastResponseId) if previousResponseId is absent.
+	 * Used to enforce "skip once" after a condense operation.
+	 */
+	suppressPreviousResponseId?: boolean
+	/**
+	 * Controls whether the response should be stored for 30 days in OpenAI's Responses API.
+	 * When true (default), responses are stored and can be referenced in future requests
+	 * using the previous_response_id for efficient conversation continuity.
+	 * Set to false to opt out of response storage for privacy or compliance reasons.
+	 * @default true
+	 */
+	store?: boolean
 }
 
 export interface ApiHandler {
@@ -78,8 +102,16 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 	const { apiProvider, ...options } = configuration
 
 	switch (apiProvider) {
+		// kilocode_change start
 		case "kilocode":
 			return new KilocodeOpenrouterHandler(options)
+		case "kilocode-openrouter": // temp typing fix
+			return new KilocodeOpenrouterHandler(options)
+		case "gemini-cli":
+			return new GeminiCliHandler(options)
+		case "virtual-quota-fallback":
+			return new VirtualQuotaFallbackHandler(options)
+		// kilocode_change end
 		case "anthropic":
 			return new AnthropicHandler(options)
 		case "claude-code":
@@ -97,7 +129,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "openai":
 			return new OpenAiHandler(options)
 		case "ollama":
-			return new KilocodeOllamaHandler(options)
+			return new NativeOllamaHandler(options)
 		case "lmstudio":
 			return new LmStudioHandler(options)
 		case "gemini":
@@ -114,6 +146,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new DeepSeekHandler(options)
 		case "doubao":
 			return new DoubaoHandler(options)
+		case "qwen-code":
+			return new QwenCodeHandler(options)
 		case "moonshot":
 			return new MoonshotHandler(options)
 		case "vscode-lm":
@@ -126,18 +160,14 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new RequestyHandler(options)
 		case "human-relay":
 			return new HumanRelayHandler()
-		// kilocode_change start
-		case "virtual-quota-fallback":
-			return new VirtualQuotaFallbackHandler(options)
-		case "bigmodel":
-			return new BigModelHandler(options)
-		// kilocode_change end
 		case "fake-ai":
 			return new FakeAIHandler(options)
 		case "xai":
 			return new XAIHandler(options)
 		case "groq":
 			return new GroqHandler(options)
+		case "deepinfra":
+			return new DeepInfraHandler(options)
 		case "huggingface":
 			return new HuggingFaceHandler(options)
 		case "chutes":
@@ -152,6 +182,24 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ZAiHandler(options)
 		case "fireworks":
 			return new FireworksHandler(options)
+		// kilocode_change start
+		case "synthetic":
+			return new SyntheticHandler(options)
+		// kilocode_change end
+		case "io-intelligence":
+			return new IOIntelligenceHandler(options)
+		case "roo":
+			// Never throw exceptions from provider constructors
+			// The provider-proxy server will handle authentication and return appropriate error codes
+			return new RooHandler(options)
+		case "featherless":
+			return new FeatherlessHandler(options)
+		case "vercel-ai-gateway":
+			return new VercelAiGatewayHandler(options)
+		// kilocode_change start
+		case "ovhcloud":
+			return new OVHCloudAIEndpointsHandler(options)
+		// kilocode_change end
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

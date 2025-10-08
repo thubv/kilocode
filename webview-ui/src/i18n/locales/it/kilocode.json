@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Benvenuto in Kilo Code!",
 		"introText1": "Kilo Code è un agente di coding AI gratuito e open source.",
-		"introText2": "Funziona con i più recenti modelli AI come Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, e oltre 450 altri.",
-		"introText3": "Crea un account gratuito e ottieni $20 di token da utilizzare con qualsiasi modello AI.",
+		"introText2": "Funziona con i più recenti modelli AI come Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e oltre 450 altri.",
+		"introText3": "Crea un account gratuito e ottieni $20 di crediti bonus quando ricarichi per la prima volta.",
 		"ctaButton": "Inizia",
 		"manualModeButton": "Usa la tua chiave API",
 		"alreadySignedUp": "Già registrato?",
@@ -13,10 +13,23 @@
 		"addCredit": "Aggiungi credito",
 		"lowBalance": "Il tuo saldo Kilo Code è basso"
 	},
+	"pagination": {
+		"previous": "Precedente",
+		"next": "Successivo",
+		"page": "Pagina {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Il periodo alpha per {{model}} è terminato! Cambia a un modello diverso per continuare.",
+		"notAllowedForTeam": "⚠️ La tua organizzazione non consente l'uso del modello {{model}}. Cambia a un modello diverso per continuare.",
+		"modelUnavailable": "⚠️ Il modello {{model}} non è disponibile. Cambia a un modello diverso per continuare.",
+		"continueWith": "Continua con {{model}}",
+		"continue": "Continua"
+	},
 	"pricing": {
 		"costUnknown": "costo sconosciuto",
 		"costUnknownDescription": "Il Provider API non ha fornito dati sui costi o la richiesta è stata annullata.",
-		"discoverModelPricing": "Scopri prezzi e capacità del modello"
+		"freeModelsDescription": "I modelli gratuiti potrebbero avere limiti di utilizzo. Usa il link qui sotto per ottimizzare l'uso dei modelli gratuiti!",
+		"freeModelsLink": "Scopri le opzioni dei modelli gratuiti e a budget"
 	},
 	"notifications": {
 		"toolRequest": "Richiesta strumento in attesa di approvazione",
@@ -34,8 +47,35 @@
 			"logout": "Disconnetti da Kilo Code",
 			"automaticFetch": "I modelli più recenti sono automaticamente disponibili in Kilo Code. Se non sei sicuro di quale modello scegliere, Kilo Code funziona meglio con i modelli consigliati elencati in alto in <strong>grassetto</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Routing dei provider OpenRouter",
-				"description": "Kilo Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello."
+				"title": "Routing dei provider",
+				"managedByOrganization": "Le impostazioni di routing dei provider sono gestite dalla tua organizzazione.",
+				"description": "Kilo Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello.",
+				"sorting": {
+					"default": "Ordinamento predefinito dei provider",
+					"price": "Preferisci provider con prezzo più basso",
+					"throughput": "Preferisci provider con throughput più alto",
+					"latency": "Preferisci provider con latenza più bassa"
+				},
+				"dataCollection": {
+					"default": "Nessuna politica dati impostata",
+					"allowFree": "Consenti addestramento prompt (solo gratuito)",
+					"allow": "Consenti addestramento prompt",
+					"deny": "Nega addestramento prompt",
+					"zdr": "Ritenzione dati zero"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Finestra di contesto",
+			"providerBreakdown": "Ripartizione Prezzi e Funzionalità dei Provider",
+			"averageKiloCodeCost": "Questo è il costo medio effettivo sostenuto da Kilo Code utilizzando questo modello nell'ultima settimana. Potrebbe essere inferiore al prezzo indicato grazie all'utilizzo della cache dei prompt.",
+			"table": {
+				"provider": "Provider",
+				"context": "L'endpoint può elaborare questo numero di token (input + output).",
+				"inputPrice": "Costo per milione di token per il prompt.",
+				"outputPrice": "Costo per milione di token per il completamento.",
+				"cacheReadPrice": "Costo per milione di token per la lettura dalla cache.",
+				"cacheWritePrice": "Costo per milione di token per la scrittura nella cache."
 			}
 		},
 		"contextManagement": {
@@ -66,7 +106,11 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code vuole condensare la tua conversazione",
 			"condenseConversation": "Condensa Conversazione"
-		}
+		},
+		"seeNewChanges": "Mostra Nuove Modifiche",
+		"revertNewChanges": "Ripristina Nuove Modifiche",
+		"confirmRevertChanges": "Conferma Ripristino Modifiche",
+		"cancelRevertChanges": "Annulla Ripristino Modifiche"
 	},
 	"newTaskPreview": {
 		"task": "Attività"
@@ -77,6 +121,8 @@
 		"logOut": "Disconnetti",
 		"currentBalance": "SALDO ATTUALE",
 		"loading": "Caricamento...",
+		"organization": "Organizzazione",
+		"personal": "Personale",
 		"shop": {
 			"title": "Acquista Crediti",
 			"popular": "Popolare",
@@ -159,37 +205,27 @@
 		}
 	},
 	"ghost": {
-		"title": "Assistenza in linea",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Attivazione automatica",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Attività Rapida In Linea",
-				"description": "Hai solo bisogno di una modifica rapida? Seleziona del codice (o anche no!) e premi Cmd+I. Descrivi il tuo obiettivo in linguaggio semplice (\"crea un componente React con queste props\", \"aggiungi la gestione degli errori a questa funzione\") e ottieni molteplici suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Vedi scorciatoia</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Attività Automatica in Linea",
-				"description": "Hai bisogno di una correzione rapida, di completare o refactoring del codice? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti concentrato. <DocsLink>Vedi scorciatoia</DocsLink>"
-			},
+			"triggers": "Trigger",
+			"keybindingDescription": "Le funzionalità Autocomplete possono essere attivate tramite comandi. Puoi configurare le <DocsLink>Scorciatoie da Tastiera qui</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Abilita attivazione automatica",
-				"description": "Quando abilitato, Kilo Code attiverà automaticamente l'Assistenza Inline quando smetti di digitare. Questo può essere utile per correzioni e suggerimenti rapidi."
+				"label": "Pausa per Completare",
+				"description": "Quando abilitato, Kilo Code attiverà automaticamente Autocomplete quando smetti di digitare. Questo può essere utile per correzioni rapide e suggerimenti."
 			},
 			"autoTriggerDelay": {
-				"label": "Ritardo attivazione automatica",
-				"description": "Il ritardo in secondi prima che Kilo Code attivi l'Assistenza Inline dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più rapidi, ma potrebbe essere più intensivo in termini di risorse."
+				"label": "Ritardo Attivazione Automatica",
+				"description": "Il ritardo in secondi prima che Kilo Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Attività Rapida ({{keybinding}})",
+				"description": "Hai bisogno solo di una modifica rapida? Seleziona del codice (o no!) e premi Cmd+I. Descrivi il tuo obiettivo in italiano semplice (\"crea un componente React con queste props\", \"aggiungi gestione errori a questa funzione\"), e ottieni più suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Attività Inline Intelligente",
-				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Vedi scorciatoia</DocsLink>"
+				"label": "Completamento Automatico Manuale ({{keybinding}})",
+				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
-			"provider": "Fornitore",
-			"apiConfigId": {
-				"label": "Configurazione API",
-				"current": "Usa la configurazione API attualmente selezionata",
-				"description": "Seleziona una configurazione API da utilizzare per i prompt di Inline Assist, o semplicemente usa quella attualmente selezionata"
-			},
-			"triggers": "Trigger",
-			"keybindingDescription": "Le funzionalità di Inline Assist sono attivate da comandi. Puoi configurare le <DocsLink>scorciatoie da tastiera qui</DocsLink>."
+			"keybindingNotFound": "non trovato"
 		}
 	},
 	"virtualProvider": {
@@ -213,5 +249,10 @@
 		"perHour": "All'ora",
 		"perDay": "Al Giorno",
 		"requestsLabel": "Richieste"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Le immagini non sono supportate dal modello attuale.",
+		"maxImagesReached": "Massimo 20 immagini per messaggio. Rimuovi alcune immagini per aggiungerne altre.",
+		"imagesRemovedNoSupport": "Immagini rimosse, non supportate dal modello."
 	}
 }

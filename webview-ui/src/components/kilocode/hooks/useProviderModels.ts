@@ -17,13 +17,9 @@ import {
 	vertexModels,
 	xaiDefaultModelId,
 	xaiModels,
-	// kilocode_change start
-	bigModelDefaultModelId,
-	bigModelModels,
-	// kilocode_change end
 	groqModels,
 	groqDefaultModelId,
-	chutesModels,
+	// chutesModels, // kilocode_change
 	chutesDefaultModelId,
 	vscodeLlmModels,
 	vscodeLlmDefaultModelId,
@@ -32,23 +28,46 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
-	kilocodeDefaultModelId,
+	qwenCodeModels,
+	qwenCodeDefaultModelId,
+	geminiCliModels,
+	claudeCodeModels,
+	claudeCodeDefaultModelId,
+	doubaoModels,
+	doubaoDefaultModelId,
+	fireworksModels,
+	fireworksDefaultModelId,
+	syntheticModels, // kilocode_change
+	syntheticDefaultModelId, // kilocode_change
+	ioIntelligenceDefaultModelId,
+	moonshotModels,
+	moonshotDefaultModelId,
+	sambaNovaModels,
+	sambaNovaDefaultModelId,
+	featherlessModels,
+	featherlessDefaultModelId,
+	deepInfraDefaultModelId,
+	cerebrasModels,
+	cerebrasDefaultModelId,
+	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 } from "@roo-code/types"
-import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 
 const FALLBACK_MODELS = {
 	models: anthropicModels,
 	defaultModel: anthropicDefaultModelId,
 }
 
-const getModelsByProvider = ({
+export const getModelsByProvider = ({
 	provider,
 	routerModels,
+	kilocodeDefaultModel,
 }: {
 	provider: ProviderName
 	routerModels: RouterModels
+	kilocodeDefaultModel: string
 }): { models: ModelRecord; defaultModel: string } => {
 	switch (provider) {
 		case "openrouter": {
@@ -87,12 +106,6 @@ const getModelsByProvider = ({
 				defaultModel: xaiDefaultModelId,
 			}
 		}
-		case "bigmodel": {
-			return {
-				models: bigModelModels,
-				defaultModel: bigModelDefaultModelId,
-			}
-		}
 		case "groq": {
 			return {
 				models: groqModels,
@@ -101,7 +114,7 @@ const getModelsByProvider = ({
 		}
 		case "chutes": {
 			return {
-				models: chutesModels,
+				models: routerModels.chutes, // kilocode_change
 				defaultModel: chutesDefaultModelId,
 			}
 		}
@@ -155,16 +168,14 @@ const getModelsByProvider = ({
 			}
 		}
 		case "ollama": {
-			// Only custom models
 			return {
-				models: {},
+				models: routerModels.ollama,
 				defaultModel: "",
 			}
 		}
 		case "lmstudio": {
-			// Only custom models
 			return {
-				models: {},
+				models: routerModels.lmstudio,
 				defaultModel: "",
 			}
 		}
@@ -177,21 +188,116 @@ const getModelsByProvider = ({
 		case "kilocode": {
 			return {
 				models: routerModels["kilocode-openrouter"],
-				defaultModel: kilocodeDefaultModelId,
+				defaultModel: kilocodeDefaultModel,
 			}
 		}
-		default: {
-			return FALLBACK_MODELS
+		// Temporary weird fix
+		case "kilocode-openrouter": {
+			return {
+				models: routerModels["kilocode-openrouter"],
+				defaultModel: kilocodeDefaultModel,
+			}
 		}
+		case "claude-code": {
+			return {
+				models: claudeCodeModels,
+				defaultModel: claudeCodeDefaultModelId,
+			}
+		}
+		case "qwen-code": {
+			return {
+				models: qwenCodeModels,
+				defaultModel: qwenCodeDefaultModelId,
+			}
+		}
+		case "gemini-cli": {
+			return {
+				models: geminiCliModels,
+				defaultModel: geminiDefaultModelId,
+			}
+		}
+		case "anthropic": {
+			return {
+				models: anthropicModels,
+				defaultModel: anthropicDefaultModelId,
+			}
+		}
+		case "doubao": {
+			return {
+				models: doubaoModels,
+				defaultModel: doubaoDefaultModelId,
+			}
+		}
+		case "fireworks": {
+			return {
+				models: fireworksModels,
+				defaultModel: fireworksDefaultModelId,
+			}
+		}
+		// kilocode_change start
+		case "synthetic": {
+			return {
+				models: syntheticModels,
+				defaultModel: syntheticDefaultModelId,
+			}
+		}
+		// kilocode_change end
+		case "io-intelligence": {
+			return {
+				models: routerModels["io-intelligence"],
+				defaultModel: ioIntelligenceDefaultModelId,
+			}
+		}
+		case "moonshot": {
+			return {
+				models: moonshotModels,
+				defaultModel: moonshotDefaultModelId,
+			}
+		}
+		case "sambanova": {
+			return {
+				models: sambaNovaModels,
+				defaultModel: sambaNovaDefaultModelId,
+			}
+		}
+		case "featherless": {
+			return {
+				models: featherlessModels,
+				defaultModel: featherlessDefaultModelId,
+			}
+		}
+		case "deepinfra": {
+			return {
+				models: routerModels.deepinfra,
+				defaultModel: deepInfraDefaultModelId,
+			}
+		}
+		// kilocode_change start
+		case "ovhcloud": {
+			return {
+				models: routerModels.ovhcloud,
+				defaultModel: ovhCloudAiEndpointsDefaultModelId,
+			}
+		}
+		// kilocode_change end
+		default:
+			return {
+				models: {},
+				defaultModel: "",
+			}
 	}
 }
 
 export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 
+	const { kilocodeDefaultModel } = useExtensionState()
+
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
+		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
+		chutesApiKey: apiConfiguration?.chutesApiKey, // kilocode_change
 	})
 
 	const { models, defaultModel } =
@@ -199,12 +305,13 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 			? getModelsByProvider({
 					provider,
 					routerModels: routerModels.data,
+					kilocodeDefaultModel,
 				})
 			: FALLBACK_MODELS
 
 	return {
 		provider,
-		providerModels: models,
+		providerModels: models as ModelRecord,
 		providerDefaultModel: defaultModel,
 		isLoading: routerModels.isLoading,
 		isError: routerModels.isError,

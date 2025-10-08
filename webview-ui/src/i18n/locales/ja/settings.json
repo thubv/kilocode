@@ -28,11 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
+		"slashCommands": "スラッシュコマンド",
 		"prompts": "プロンプト",
+		"ui": "UI",
 		"experimental": "実験的",
 		"language": "言語",
 		"about": "Kilo Codeについて",
-		"display": "表示"
+		"display": "表示",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
 	},
 	"prompts": {
 		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"
@@ -48,6 +54,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "APIキー：",
 		"geminiApiKeyPlaceholder": "Gemini APIキーを入力してください",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "APIキー",
+		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI GatewayのAPIキーを入力してください",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
@@ -114,6 +123,7 @@
 			"modelDimensionRequired": "モデルの次元が必要です",
 			"geminiApiKeyRequired": "Gemini APIキーが必要です",
 			"mistralApiKeyRequired": "Mistral APIキーが必要です",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway APIキーが必要です",
 			"ollamaBaseUrlRequired": "OllamaのベースURLが必要です",
 			"baseUrlRequired": "ベースURLが必要です",
 			"modelDimensionMinValue": "モデルの次元は0より大きくなければなりません"
@@ -124,9 +134,12 @@
 		"searchMinScoreResetTooltip": "デフォルト値（0.4）にリセット",
 		"searchMaxResultsLabel": "最大検索結果数",
 		"searchMaxResultsDescription": "コードベースインデックスをクエリする際に返される検索結果の最大数。値を高くするとより多くのコンテキストが提供されますが、関連性の低い結果が含まれる可能性があります。",
-		"resetToDefault": "デフォルトにリセット"
+		"resetToDefault": "デフォルトにリセット",
+		"cancelling": "キャンセル中...",
+		"cancelIndexingButton": "インデックス作成をキャンセル"
 	},
 	"autoApprove": {
+		"toggleShortcut": "<SettingsLink>IDEの環境設定</SettingsLink>で、この設定のグローバルショートカットを設定できます。",
 		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
 		"enabled": "自動承認が有効",
 		"toggleAriaLabel": "自動承認の切り替え",
@@ -238,6 +251,8 @@
 		"awsCustomArnDesc": "ARN内のリージョンが上で選択したAWSリージョンと一致していることを確認してください。",
 		"openRouterApiKey": "OpenRouter APIキー",
 		"getOpenRouterApiKey": "OpenRouter APIキーを取得",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway APIキー",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway APIキーを取得",
 		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
@@ -258,22 +273,33 @@
 			"error": "モデルリストの更新に失敗しました。もう一度お試しください。"
 		},
 		"getRequestyApiKey": "Requesty APIキーを取得",
+		"getRequestyBaseUrl": "ベースURL",
+		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
 		"openRouterTransformsText": "プロンプトとメッセージチェーンをコンテキストサイズに圧縮 (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic APIキー",
 		"getAnthropicApiKey": "Anthropic APIキーを取得",
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
+		"anthropic1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
+		"anthropic1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
+		"awsBedrock1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
+		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
 		"cerebrasApiKey": "Cerebras APIキー",
 		"getCerebrasApiKey": "Cerebras APIキーを取得",
 		"chutesApiKey": "Chutes APIキー",
 		"getChutesApiKey": "Chutes APIキーを取得",
 		"fireworksApiKey": "Fireworks APIキー",
 		"getFireworksApiKey": "Fireworks APIキーを取得",
+		"syntheticApiKey": "Synthetic APIキー",
+		"getSyntheticApiKey": "Synthetic APIキーを取得",
+		"featherlessApiKey": "Featherless APIキー",
+		"getFeatherlessApiKey": "Featherless APIキーを取得",
+		"ioIntelligenceApiKey": "IO Intelligence APIキー",
+		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence APIキーを入力してください",
+		"getIoIntelligenceApiKey": "IO Intelligence APIキーを取得",
 		"deepSeekApiKey": "DeepSeek APIキー",
 		"getDeepSeekApiKey": "DeepSeek APIキーを取得",
 		"doubaoApiKey": "Doubao APIキー",
 		"getDoubaoApiKey": "Doubao APIキーを取得",
-		"bigModelApiKey": "BigModel APIキー",
-		"getBigModelApiKey": "BigModel APIキーを取得",
 		"moonshotApiKey": "Moonshot APIキー",
 		"getMoonshotApiKey": "Moonshot APIキーを取得",
 		"moonshotBaseUrl": "Moonshot エントリーポイント",
@@ -288,6 +314,8 @@
 		"sambaNovaApiKey": "SambaNova APIキー",
 		"getHuggingFaceApiKey": "Hugging Face APIキーを取得",
 		"huggingFaceApiKey": "Hugging Face APIキー",
+		"getOvhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints APIキーを取得",
+		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints APIキー",
 		"huggingFaceModelId": "モデルID",
 		"huggingFaceLoading": "読み込み中...",
 		"huggingFaceModelsCount": "({{count}}個のモデル)",
@@ -364,6 +392,11 @@
 		"ollama": {
 			"baseUrl": "ベースURL（オプション）",
 			"modelId": "モデルID",
+			"apiKey": "Ollama APIキー",
+			"apiKeyPlaceholder": "APIキーを入力してください",
+			"apiKeyHelp": "認証されたOllamaインスタンスやクラウドサービス用のオプションAPIキー。ローカルインストールの場合は空のままにしてください。",
+			"numCtx": "コンテキストウィンドウサイズ (num_ctx)",
+			"numCtxHelp": "モデルのデフォルトのコンテキストウィンドウサイズを上書きします。モデルのModelfile構成を使用するには、空のままにします。最小値は128です。",
 			"description": "Ollamaを使用すると、ローカルコンピューターでモデルを実行できます。始め方については、クイックスタートガイドをご覧ください。",
 			"warning": "注意：Kilo Codeは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
 		},
@@ -374,6 +407,10 @@
 		"humanRelay": {
 			"description": "APIキーは不要ですが、ユーザーはウェブチャットAIに情報をコピー＆ペーストする必要があります。",
 			"instructions": "使用中にダイアログボックスが表示され、現在のメッセージが自動的にクリップボードにコピーされます。これらをウェブ版のAI（ChatGPTやClaudeなど）に貼り付け、AIの返答をダイアログボックスにコピーして確認ボタンをクリックする必要があります。"
+		},
+		"roo": {
+			"authenticatedMessage": "Roo Code Cloudアカウントを通じて安全に認証されています。",
+			"connectButton": "Roo Code Cloudに接続"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,6 +473,7 @@
 		},
 		"reasoningEffort": {
 			"label": "モデル推論の労力",
+			"minimal": "最小 (最速)",
 			"high": "高",
 			"medium": "中",
 			"low": "低"
@@ -469,6 +507,13 @@
 			"requirement4": "APIキーは使用しません - 認証はOAuthで処理されます",
 			"requirement5": "Gemini CLIツールが最初にインストールされ、認証されている必要があります",
 			"freeAccess": "OAuth認証による無料アクセス"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth認証情報パス（オプション）",
+			"oauthPathDescription": "OAuth認証情報ファイルへのパス。デフォルトの場所（~/.qwen/oauth_creds.json）を使用する場合は空のままにしてください。",
+			"description": "このプロバイダーはQwenサービスからのOAuth認証を使用し、APIキーは必要ありません。",
+			"instructions": "認証ファイルを取得して指定されたパスに配置するには、公式ドキュメントに従ってください。",
+			"setupLink": "Qwen公式ドキュメント"
 		}
 	},
 	"browser": {
@@ -719,17 +764,6 @@
 			"name": "同時ファイル編集を有効にする",
 			"description": "有効にすると、Kilo Codeは単一のリクエストで複数のファイルを編集できます。無効にすると、Kilo Codeはファイルを一つずつ編集する必要があります。これを無効にすることで、能力の低いモデルで作業する場合や、ファイル変更をより細かく制御したい場合に役立ちます。"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Applyを有効にする",
-			"description": "有効にすると、Kilo CodeはMorph Fast Applyを使用してファイルを編集できます。",
-			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）",
-			"warning": "Morph APIキーを設定しない場合でも、Kilo CodeまたはOpenRouterでFast Applyを使用できます。アカウントにモデル使用料金が請求されますが、現在この料金は拡張機能のUIには表示されません。"
-		},
-		"INLINE_ASSIST": {
-			"name": "インラインアシスト",
-			"description": "エディタ内で直接コードの提案や改善を行う、インラインアシスト機能を有効にします。ターゲットを絞った変更のためのクイックインラインタスク（Cmd+I）や、文脈に応じた改善のための自動インラインタスクが含まれます。"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "バックグラウンド編集",
 			"description": "有効にすると、エディターのフォーカス中断を防ぎます。ファイル編集は差分ビューを開いたりフォーカスを奪ったりすることなく、バックグラウンドで行われます。Rooが変更を行っている間も中断されることなく作業を続けることができます。ファイルは診断をキャプチャするためにフォーカスなしで開くか、完全に閉じたままにできます。"
@@ -737,6 +771,47 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "新しいメッセージパーサーを使う",
 			"description": "実験的なストリーミングメッセージパーサーを有効にします。長い回答をより効率的に処理し、遅延を減らします。"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "新しいタスクには'todos'リストを必須にする",
+			"description": "有効にすると、new_taskツールはtodosパラメータの提供が必須になります。これにより、すべての新しいタスクが明確な目的のリストで開始されることが保証されます。無効（デフォルト）の場合、下位互換性のためにtodosパラメータはオプションのままです。"
+		},
+		"IMAGE_GENERATION": {
+			"name": "AI画像生成を有効にする",
+			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Kilo Code または OpenRouter API キーの設定が必要です。",
+			"apiProvider": "APIプロバイダー",
+			"openRouterApiKeyLabel": "OpenRouter APIキー",
+			"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
+			"kiloCodeApiKeyLabel": "Kilo Code APIキー",
+			"kiloCodeApiKeyPlaceholder": "Kilo Code APIキーを入力してください",
+			"kiloCodeApiKeyPaste": "現在の Kilo Code API キーを貼り付け",
+			"getApiKeyText": "APIキーを取得する場所",
+			"modelSelectionLabel": "画像生成モデル",
+			"modelSelectionDescription": "画像生成に使用するモデルを選択",
+			"warningMissingKey": "⚠️ 画像生成にはAPIキーが必要です。上記で設定してください。",
+			"successConfigured": "✓ 画像生成が設定され、使用準備完了です"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "エディター内で直接コードの迅速な提案と改善を行うAutocomplete機能を有効にします。ターゲット変更用のクイックタスク（Cmd+I）とコンテキスト改善用のAutocompleteが含まれます。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Fast Applyを有効化",
+			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
+			"apiKey": "Morph APIキー（オプション）",
+			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"modelLabel": "モデル選択",
+			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
+			"models": {
+				"auto": "自動（デフォルト - 最適なものを選択）",
+				"morphFast": "Morph v3 Fast（高速、低コスト）",
+				"morphLarge": "Morph v3 Large（より高性能）",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "モデル開始スラッシュコマンドを有効にする",
+			"description": "有効にすると、Kilo Codeがワークフローを実行するためにあなたのスラッシュコマンドを実行できます。"
 		}
 	},
 	"promptCaching": {
@@ -755,6 +830,7 @@
 		"noComputerUse": "コンピュータ使用をサポートしていません",
 		"supportsPromptCache": "プロンプトキャッシュをサポート",
 		"noPromptCache": "プロンプトキャッシュをサポートしていません",
+		"contextWindow": "コンテキストウィンドウ:",
 		"maxOutput": "最大出力",
 		"inputPrice": "入力価格",
 		"outputPrice": "出力価格",
@@ -809,7 +885,8 @@
 		"modelAvailability": "指定されたモデルID（{{modelId}}）は利用できません。別のモデルを選択してください。",
 		"providerNotAllowed": "プロバイダー「{{provider}}」は組織によって許可されていません",
 		"modelNotAllowed": "モデル「{{model}}」はプロバイダー「{{provider}}」に対して組織によって許可されていません",
-		"profileInvalid": "このプロファイルには、組織によって許可されていないプロバイダーまたはモデルが含まれています"
+		"profileInvalid": "このプロファイルには、組織によって許可されていないプロバイダーまたはモデルが含まれています",
+		"qwenCodeOauthPath": "有効なOAuth認証情報のパスを提供する必要があります"
 	},
 	"placeholders": {
 		"apiKey": "API キーを入力...",
@@ -850,9 +927,36 @@
 			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けすることで、タスクの進捗状況を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりすることができます。"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "オートコンプリート時にガターアニメーションを表示",
+			"description": "オートコンプリートの実行中にエディタガターにアニメーションインジケータを表示",
+			"preview": "アニメーションプレビュー"
+		}
+	},
 	"includeMaxOutputTokens": "最大出力トークンを含める",
 	"includeMaxOutputTokensDescription": "APIリクエストで最大出力トークンパラメータを送信します。一部のプロバイダーはこれをサポートしていない場合があります。",
 	"limitMaxTokensDescription": "レスポンスの最大トークン数を制限する",
 	"maxOutputTokensLabel": "最大出力トークン",
-	"maxTokensGenerateDescription": "レスポンスで生成する最大トークン数"
+	"maxTokensGenerateDescription": "レスポンスで生成する最大トークン数",
+	"serviceTier": {
+		"label": "サービスティア",
+		"tooltip": "APIリクエストをより速く処理するには、優先処理サービスティアをお試しください。低価格でレイテンシが高い場合は、フレックス処理ティアをお試しください。",
+		"standard": "標準",
+		"flex": "フレックス",
+		"priority": "優先",
+		"pricingTableTitle": "サービスティア別料金（100万トークンあたりの価格）",
+		"columns": {
+			"tier": "ティア",
+			"input": "入力",
+			"output": "出力",
+			"cacheReads": "キャッシュ読み取り"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "デフォルトで思考メッセージを折りたたむ",
+			"description": "有効にすると、操作するまで思考ブロックがデフォルトで折りたたまれます"
+		}
+	}
 }

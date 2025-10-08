@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import { getWorkspacePath } from "../../utils/path"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { VectorStoreSearchResult } from "./interfaces"
 import { IndexingState } from "./interfaces/manager"
@@ -9,6 +8,7 @@ import { CodeIndexServiceFactory } from "./service-factory"
 import { CodeIndexSearchService } from "./search-service"
 import { CodeIndexOrchestrator } from "./orchestrator"
 import { CacheManager } from "./cache-manager"
+import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import fs from "fs/promises"
 import ignore from "ignore"
 import path from "path"
@@ -132,7 +132,7 @@ export class CodeIndexManager {
 		}
 
 		// 3. Check if workspace is available
-		const workspacePath = getWorkspacePath()
+		const workspacePath = this.workspacePath
 		if (!workspacePath) {
 			this._stateManager.setSystemState("Standby", "No workspace folder open")
 			return { requiresRestart }
@@ -202,6 +202,20 @@ export class CodeIndexManager {
 			this._orchestrator.stopWatcher()
 		}
 	}
+
+	// kilocode_change start
+	/**
+	 * Cancel any active indexing activity immediately.
+	 */
+	public cancelIndexing(): void {
+		if (!this.isFeatureEnabled) {
+			return
+		}
+		if (this._orchestrator) {
+			this._orchestrator.cancelIndexing()
+		}
+	}
+	// kilocode_change end
 
 	/**
 	 * Recovers from error state by clearing the error and resetting internal state.
@@ -305,13 +319,14 @@ export class CodeIndexManager {
 		)
 
 		const ignoreInstance = ignore()
-		const workspacePath = getWorkspacePath()
+		const workspacePath = this.workspacePath
 
 		if (!workspacePath) {
 			this._stateManager.setSystemState("Standby", "")
 			return
 		}
 
+		// Create .gitignore instance
 		const ignorePath = path.join(workspacePath, ".gitignore")
 		try {
 			const content = await fs.readFile(ignorePath, "utf8")
@@ -327,20 +342,32 @@ export class CodeIndexManager {
 			})
 		}
 
+		// Create RooIgnoreController instance
+		const rooIgnoreController = new RooIgnoreController(workspacePath)
+		await rooIgnoreController.initialize()
+
 		// (Re)Create shared service instances
 		const { embedder, vectorStore, scanner, fileWatcher } = this._serviceFactory.createServices(
 			this.context,
 			this._cacheManager!,
 			ignoreInstance,
+			rooIgnoreController,
 		)
 
-		// Validate embedder configuration before proceeding
-		const validationResult = await this._serviceFactory.validateEmbedder(embedder)
-		if (!validationResult.valid) {
-			const errorMessage = validationResult.error || "Embedder configuration validation failed"
-			this._stateManager.setSystemState("Error", errorMessage)
-			throw new Error(errorMessage)
+		// kilocode_change start
+		// Only validate the embedder if it matches the currently configured provider
+		const config = this._configManager!.getConfig()
+		const shouldValidate = embedder.embedderInfo.name === config.embedderProvider
+
+		if (shouldValidate) {
+			const validationResult = await this._serviceFactory.validateEmbedder(embedder)
+			if (!validationResult.valid) {
+				const errorMessage = validationResult.error || "Embedder configuration validation failed"
+				this._stateManager.setSystemState("Error", errorMessage)
+				throw new Error(errorMessage)
+			}
 		}
+		// kilocode_change end
 
 		// (Re)Initialize orchestrator
 		this._orchestrator = new CodeIndexOrchestrator(

@@ -67,10 +67,7 @@ vi.mock("../../common/VersionIndicator", () => ({
 }))
 
 // Get the mock function after the module is mocked
-const mockVersionIndicator = vi.mocked(
-	// @ts-expect-error - accessing mocked module
-	(await import("../../common/VersionIndicator")).default,
-)
+const mockVersionIndicator = vi.mocked((await import("../../common/VersionIndicator")).default)
 
 vi.mock("../Announcement", () => ({
 	default: function MockAnnouncement({ hideAnnouncement }: { hideAnnouncement: () => void }) {
@@ -85,37 +82,32 @@ vi.mock("../Announcement", () => ({
 	},
 }))
 
-// Mock RooCloudCTA component
-vi.mock("@src/components/welcome/RooCloudCTA", () => ({
-	default: function MockRooCloudCTA() {
-		return (
-			<div data-testid="roo-cloud-cta">
-				<div>rooCloudCTA.title</div>
-				<div>rooCloudCTA.description</div>
-				<div>rooCloudCTA.joinWaitlist</div>
-			</div>
-		)
+// Mock DismissibleUpsell component
+vi.mock("@/components/common/DismissibleUpsell", () => ({
+	default: function MockDismissibleUpsell({ children }: { children: React.ReactNode }) {
+		return <div data-testid="dismissible-upsell">{children}</div>
 	},
 }))
 
 // Mock QueuedMessages component
 vi.mock("../QueuedMessages", () => ({
-	default: function MockQueuedMessages({
-		messages = [],
-		onRemoveMessage,
+	QueuedMessages: function MockQueuedMessages({
+		queue = [],
+		onRemove,
 	}: {
-		messages?: Array<{ id: string; text: string; images?: string[] }>
-		onRemoveMessage?: (id: string) => void
+		queue?: Array<{ id: string; text: string; images?: string[] }>
+		onRemove?: (index: number) => void
+		onUpdate?: (index: number, newText: string) => void
 	}) {
-		if (!messages || messages.length === 0) {
+		if (!queue || queue.length === 0) {
 			return null
 		}
 		return (
 			<div data-testid="queued-messages">
-				{messages.map((msg) => (
+				{queue.map((msg, index) => (
 					<div key={msg.id}>
 						<span>{msg.text}</span>
-						<button aria-label="Remove message" onClick={() => onRemoveMessage?.(msg.id)}>
+						<button aria-label="Remove message" onClick={() => onRemove?.(index)}>
 							Remove
 						</button>
 					</div>
@@ -181,30 +173,33 @@ vi.mock("../ChatTextArea", () => {
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const mockReact = require("react")
 
-	return {
-		default: mockReact.forwardRef(function MockChatTextArea(
-			props: ChatTextAreaProps,
-			ref: React.ForwardedRef<{ focus: () => void }>,
-		) {
-			// Use useImperativeHandle to expose the mock focus method
-			React.useImperativeHandle(ref, () => ({
-				focus: mockFocus,
-			}))
+	const ChatTextAreaComponent = mockReact.forwardRef(function MockChatTextArea(
+		props: ChatTextAreaProps,
+		ref: React.ForwardedRef<{ focus: () => void }>,
+	) {
+		// Use useImperativeHandle to expose the mock focus method
+		mockReact.useImperativeHandle(ref, () => ({
+			focus: mockFocus,
+		}))
 
-			return (
-				<div data-testid="chat-textarea">
-					<input
-						ref={mockInputRef}
-						type="text"
-						onChange={(e) => {
-							// With message queueing, onSend is always called (it handles queueing internally)
-							props.onSend(e.target.value)
-						}}
-						data-sending-disabled={props.sendingDisabled}
-					/>
-				</div>
-			)
-		}),
+		return (
+			<div data-testid="chat-textarea">
+				<input
+					ref={mockInputRef}
+					type="text"
+					onChange={(e) => {
+						// With message queueing, onSend is always called (it handles queueing internally)
+						props.onSend(e.target.value)
+					}}
+					data-sending-disabled={props.sendingDisabled}
+				/>
+			</div>
+		)
+	})
+
+	return {
+		default: ChatTextAreaComponent,
+		ChatTextArea: ChatTextAreaComponent, // Export as named export too
 	}
 })
 
@@ -1080,40 +1075,61 @@ describe("ChatView - Focus Grabbing Tests", () => {
 	it("does not grab focus when follow-up question presented", async () => {
 		const { getByTestId } = renderChatView()
 
+		// Clear the initial focus call from useMount effect
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve))
+		})
+		mockFocus.mockClear()
+
 		// First hydrate state with initial task
-		mockPostMessage({
-			clineMessages: [
-				{
-					type: "say",
-					say: "task",
-					ts: Date.now() - 2000,
-					text: "Initial task",
-				},
-			],
+		await act(async () => {
+			mockPostMessage({
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+				],
+			})
 		})
 
-		// Clear any initial calls
+		// Wait for initial state to settle
+		await waitFor(() => {
+			expect(getByTestId("chat-textarea")).toBeInTheDocument()
+		})
+
+		// Clear any focus calls from initial state processing
 		mockFocus.mockClear()
 
 		// Add follow-up question
-		mockPostMessage({
-			clineMessages: [
-				{
-					type: "say",
-					say: "task",
-					ts: Date.now() - 2000,
-					text: "Initial task",
-				},
-				{
-					type: "ask",
-					ask: "followup",
-					ts: Date.now(),
-					text: "Should I continue?",
-				},
-			],
+		await act(async () => {
+			mockPostMessage({
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+					{
+						type: "ask",
+						ask: "followup",
+						ts: Date.now(),
+						text: "Should I continue?",
+					},
+				],
+			})
 		})
 
-		// Wait a bit to ensure any focus operations would have occurred
+		// Wait for the follow-up question to be processed and any debounced effects to complete
+		// The useDebounceEffect has a 50ms delay, so we wait longer to ensure it completes
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve))
+		})
+
+		// Ensure the textarea is still in the document
 		await waitFor(() => {
 			expect(getByTestId("chat-textarea")).toBeInTheDocument()
 		})
@@ -1277,7 +1293,7 @@ describe.skip("ChatView - Version Indicator Tests", () => {
 it.skip("ChatView - RooCloudCTA Display Tests", () => {
 	beforeEach(() => vi.clearAllMocks())
 
-	it("does not show RooCloudCTA when user is authenticated to Cloud", () => {
+	it("does not show DismissibleUpsell when user is authenticated to Cloud", () => {
 		const { queryByTestId } = renderChatView()
 
 		// Hydrate state with user authenticated to cloud
@@ -1292,11 +1308,11 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 			clineMessages: [], // No active task
 		})
 
-		// Should not show RooCloudCTA when authenticated
-		expect(queryByTestId("roo-cloud-cta")).not.toBeInTheDocument()
+		// Should not show DismissibleUpsell when authenticated
+		expect(queryByTestId("dismissible-upsell")).not.toBeInTheDocument()
 	})
 
-	it("does not show RooCloudCTA when user has only run 3 tasks in their history", () => {
+	it("does not show DismissibleUpsell when user has only run 3 tasks in their history", () => {
 		const { queryByTestId } = renderChatView()
 
 		// Hydrate state with user not authenticated but only 3 tasks
@@ -1310,8 +1326,8 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 			clineMessages: [], // No active task
 		})
 
-		// Should not show RooCloudCTA with less than 4 tasks
-		expect(queryByTestId("roo-cloud-cta")).not.toBeInTheDocument()
+		// Should not show DismissibleUpsell with less than 4 tasks
+		expect(queryByTestId("dismissible-upsell")).not.toBeInTheDocument()
 	})
 
 	// kilocode_change skip
@@ -1330,9 +1346,9 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 			clineMessages: [], // No active task
 		})
 
-		// Wait for component to render and show RooCloudCTA
+		// Wait for component to render and show DismissibleUpsell
 		await waitFor(() => {
-			expect(getByTestId("roo-cloud-cta")).toBeInTheDocument()
+			expect(getByTestId("dismissible-upsell")).toBeInTheDocument()
 		})
 	})
 
@@ -1353,13 +1369,13 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 			clineMessages: [], // No active task
 		})
 
-		// Wait for component to render and show RooCloudCTA
+		// Wait for component to render and show DismissibleUpsell
 		await waitFor(() => {
-			expect(getByTestId("roo-cloud-cta")).toBeInTheDocument()
+			expect(getByTestId("dismissible-upsell")).toBeInTheDocument()
 		})
 	})
 
-	it("does not show RooCloudCTA when there is an active task (regardless of auth status)", async () => {
+	it("does not show DismissibleUpsell when there is an active task (regardless of auth status)", async () => {
 		const { queryByTestId } = renderChatView()
 
 		// Hydrate state with active task
@@ -1383,8 +1399,8 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 
 		// Wait for component to render with active task
 		await waitFor(() => {
-			// Should not show RooCloudCTA during active task
-			expect(queryByTestId("roo-cloud-cta")).not.toBeInTheDocument()
+			// Should not show DismissibleUpsell during active task
+			expect(queryByTestId("dismissible-upsell")).not.toBeInTheDocument()
 			// Should not show RooTips either since the entire welcome screen is hidden during active tasks
 			expect(queryByTestId("roo-tips")).not.toBeInTheDocument()
 			// Should not show RooHero either since the entire welcome screen is hidden during active tasks
@@ -1408,8 +1424,8 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 			clineMessages: [], // No active task
 		})
 
-		// Should not show RooCloudCTA but should show RooTips
-		expect(queryByTestId("roo-cloud-cta")).not.toBeInTheDocument()
+		// Should not show DismissibleUpsell but should show RooTips
+		expect(queryByTestId("dismissible-upsell")).not.toBeInTheDocument()
 		expect(getByTestId("roo-tips")).toBeInTheDocument()
 	})
 
@@ -1428,8 +1444,8 @@ it.skip("ChatView - RooCloudCTA Display Tests", () => {
 			clineMessages: [], // No active task
 		})
 
-		// Should not show RooCloudCTA but should show RooTips
-		expect(queryByTestId("roo-cloud-cta")).not.toBeInTheDocument()
+		// Should not show DismissibleUpsell but should show RooTips
+		expect(queryByTestId("dismissible-upsell")).not.toBeInTheDocument()
 		expect(getByTestId("roo-tips")).toBeInTheDocument()
 	})
 })

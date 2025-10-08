@@ -10,6 +10,10 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { handleOpenAIError } from "./utils/openai-error-handler"
+import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
+import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -55,18 +59,24 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			throw new Error("API key is required")
 		}
 
+		const timeout = getApiRequestTimeout() // kilocode_change
 		this.client = new OpenAI({
 			baseURL,
 			apiKey: this.options.apiKey,
 			defaultHeaders: DEFAULT_HEADERS,
+			// kilocode_change start
+			timeout: timeout,
+			fetch: fetchWithTimeout(timeout),
+			// kilocode_change end
 		})
 	}
 
-	override async *createMessage(
+	protected createStream(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
-	): ApiStream {
+		requestOptions?: OpenAI.RequestOptions,
+	) {
 		const {
 			id: model,
 			info: { maxTokens: max_tokens },
@@ -83,9 +93,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			stream_options: { include_usage: true },
 		}
 
-		const stream = await this.client.chat.completions.create(params)
+		try {
+			return this.client.chat.completions.create(params, requestOptions)
+		} catch (error) {
+			throw handleOpenAIError(error, this.providerName)
+		}
+	}
+
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
+		const stream = await this.createStream(systemPrompt, messages, metadata)
 
 		for await (const chunk of stream) {
+			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
 
 			if (delta?.content) {
@@ -116,11 +139,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`${this.providerName} completion error: ${error.message}`)
-			}
-
-			throw error
+			throw handleOpenAIError(error, this.providerName)
 		}
 	}
 

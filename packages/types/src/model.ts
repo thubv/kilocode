@@ -11,6 +11,14 @@ export const reasoningEffortsSchema = z.enum(reasoningEfforts)
 export type ReasoningEffort = z.infer<typeof reasoningEffortsSchema>
 
 /**
+ * ReasoningEffortWithMinimal
+ */
+
+export const reasoningEffortWithMinimalSchema = z.union([reasoningEffortsSchema, z.literal("minimal")])
+
+export type ReasoningEffortWithMinimal = z.infer<typeof reasoningEffortWithMinimalSchema>
+
+/**
  * Verbosity
  */
 
@@ -19,6 +27,13 @@ export const verbosityLevels = ["low", "medium", "high"] as const
 export const verbosityLevelsSchema = z.enum(verbosityLevels)
 
 export type VerbosityLevel = z.infer<typeof verbosityLevelsSchema>
+
+/**
+ * Service tiers (OpenAI Responses API)
+ */
+export const serviceTiers = ["default", "flex", "priority"] as const
+export const serviceTierSchema = z.enum(serviceTiers)
+export type ServiceTier = z.infer<typeof serviceTierSchema>
 
 /**
  * ModelParameter
@@ -44,7 +59,11 @@ export const modelInfoSchema = z.object({
 	supportsImages: z.boolean().optional(),
 	supportsComputerUse: z.boolean().optional(),
 	supportsPromptCache: z.boolean(),
+	// Capability flag to indicate whether the model supports an output verbosity parameter
+	supportsVerbosity: z.boolean().optional(),
 	supportsReasoningBudget: z.boolean().optional(),
+	// Capability flag to indicate whether the model supports temperature parameter
+	supportsTemperature: z.boolean().optional(),
 	requiredReasoningBudget: z.boolean().optional(),
 	supportsReasoningEffort: z.boolean().optional(),
 	supportedParameters: z.array(modelParametersSchema).optional(),
@@ -57,10 +76,19 @@ export const modelInfoSchema = z.object({
 	minTokensPerCachePoint: z.number().optional(),
 	maxCachePoints: z.number().optional(),
 	cachableFields: z.array(z.string()).optional(),
-	preferredIndex: z.number().nullish(), // kilocode_change
+	// kilocode_change start
+	displayName: z.string().nullish(),
+	preferredIndex: z.number().nullish(),
+	// kilocode_change end
+	/**
+	 * Service tiers with pricing information.
+	 * Each tier can have a name (for OpenAI service tiers) and pricing overrides.
+	 * The top-level input/output/cache* fields represent the default/standard tier.
+	 */
 	tiers: z
 		.array(
 			z.object({
+				name: serviceTierSchema.optional(), // Service tier name (flex, priority, etc.)
 				contextWindow: z.number(),
 				inputPrice: z.number().optional(),
 				outputPrice: z.number().optional(),

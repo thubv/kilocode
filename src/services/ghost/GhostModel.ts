@@ -3,10 +3,15 @@ import { ApiHandler, buildApiHandler } from "../../api"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
+import { ApiStreamChunk } from "../../api/transform/stream"
+
+const KILOCODE_DEFAULT_MODEL = "mistralai/codestral-2508"
+const MISTRAL_DEFAULT_MODEL = "codestral-latest"
+
+const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
-	private apiConfigId: string | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -17,46 +22,93 @@ export class GhostModel {
 	}
 
 	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
-		this.apiConfigId = settings?.apiConfigId || null
-		const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
-
-		const profileQuery = this.apiConfigId
-			? {
-					id: this.apiConfigId,
+		const profiles = await providerSettingsManager.listConfig()
+		const validProfiles = profiles
+			.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
+			.sort((a, b) => {
+				if (!a.apiProvider) {
+					return 1 // Place undefined providers at the end
 				}
-			: {
-					name: defaultApiConfigId,
+				if (!b.apiProvider) {
+					return -1 // Place undefined providers at the beginning
 				}
+				return (
+					SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
+					SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
+				)
+			})
 
-		const profile = await providerSettingsManager.getProfile(profileQuery)
-		this.apiHandler = buildApiHandler(profile)
+		const selectedProfile = validProfiles[0] || null
+		if (selectedProfile) {
+			const profile = await providerSettingsManager.getProfile({
+				id: selectedProfile.id,
+			})
+			const profileProvider = profile.apiProvider
+			let modelDefinition = {}
+			if (profileProvider === "kilocode") {
+				modelDefinition = {
+					kilocodeModel: KILOCODE_DEFAULT_MODEL,
+				}
+			} else if (profileProvider === "openrouter") {
+				modelDefinition = {
+					openRouterModelId: KILOCODE_DEFAULT_MODEL,
+				}
+			} else if (profileProvider === "mistral") {
+				modelDefinition = {
+					apiModelId: MISTRAL_DEFAULT_MODEL,
+				}
+			}
+			this.apiHandler = buildApiHandler({
+				...profile,
+				...modelDefinition,
+			})
+		}
+
 		if (this.apiHandler instanceof OpenRouterHandler) {
 			await this.apiHandler.fetchModel()
 		}
+
 		this.loaded = true
 	}
 
-	public async generateResponse(systemPrompt: string, userPrompt: string) {
+	/**
+	 * Generate response with streaming callback support
+	 */
+	public async generateResponse(
+		systemPrompt: string,
+		userPrompt: string,
+		onChunk: (chunk: ApiStreamChunk) => void,
+	): Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}> {
 		if (!this.apiHandler) {
 			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")
 		}
 
+		console.log("USED MODEL", this.apiHandler.getModel())
+
 		const stream = this.apiHandler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: userPrompt }] },
 		])
 
-		let response: string = ""
 		let cost = 0
 		let inputTokens = 0
 		let outputTokens = 0
 		let cacheReadTokens = 0
 		let cacheWriteTokens = 0
+
 		try {
 			for await (const chunk of stream) {
-				if (chunk.type === "text") {
-					response += chunk.text
-				} else if (chunk.type === "usage") {
+				// Call the callback with each chunk
+				onChunk(chunk)
+
+				// Track usage information
+				if (chunk.type === "usage") {
 					cost = chunk.totalCost ?? 0
 					cacheReadTokens = chunk.cacheReadTokens ?? 0
 					cacheWriteTokens = chunk.cacheWriteTokens ?? 0
@@ -66,11 +118,10 @@ export class GhostModel {
 			}
 		} catch (error) {
 			console.error("Error streaming completion:", error)
-			response = ""
+			throw error
 		}
 
 		return {
-			response,
 			cost,
 			inputTokens,
 			outputTokens,

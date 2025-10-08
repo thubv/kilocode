@@ -5,6 +5,7 @@ import {
 	type GenerateContentParameters,
 	type GenerateContentConfig,
 	type GroundingMetadata,
+	FinishReason, // kilocode_change
 } from "@google/genai"
 import type { JWTInput } from "google-auth-library"
 
@@ -15,11 +16,12 @@ import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
 import { t } from "i18next"
-import type { ApiStream } from "../transform/stream"
+import type { ApiStream, GroundingSource } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
+import { throwMaxCompletionTokensReachedError } from "./kilocode/verifyFinishReason"
 
 type GeminiHandlerOptions = ApiHandlerOptions & {
 	isVertex?: boolean
@@ -100,6 +102,12 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				if (chunk.candidates && chunk.candidates.length > 0) {
 					const candidate = chunk.candidates[0]
 
+					// kilocode_change start
+					if (candidate.finishReason === FinishReason.MAX_TOKENS) {
+						throwMaxCompletionTokensReachedError()
+					}
+					// kilocode_change end
+
 					if (candidate.groundingMetadata) {
 						pendingGroundingMetadata = candidate.groundingMetadata
 					}
@@ -132,9 +140,9 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			if (pendingGroundingMetadata) {
-				const citations = this.extractCitationsOnly(pendingGroundingMetadata)
-				if (citations) {
-					yield { type: "text", text: `\n\n${t("common:errors.gemini.sources")} ${citations}` }
+				const sources = this.extractGroundingSources(pendingGroundingMetadata)
+				if (sources.length > 0) {
+					yield { type: "grounding", sources }
 				}
 			}
 
@@ -175,28 +183,38 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		return { id: id.endsWith(":thinking") ? id.replace(":thinking", "") : id, info, ...params }
 	}
 
-	private extractCitationsOnly(groundingMetadata?: GroundingMetadata): string | null {
+	private extractGroundingSources(groundingMetadata?: GroundingMetadata): GroundingSource[] {
 		const chunks = groundingMetadata?.groundingChunks
 
 		if (!chunks) {
-			return null
+			return []
 		}
 
-		const citationLinks = chunks
-			.map((chunk, i) => {
+		return chunks
+			.map((chunk): GroundingSource | null => {
 				const uri = chunk.web?.uri
+				const title = chunk.web?.title || uri || "Unknown Source"
+
 				if (uri) {
-					return `[${i + 1}](${uri})`
+					return {
+						title,
+						url: uri,
+					}
 				}
 				return null
 			})
-			.filter((link): link is string => link !== null)
+			.filter((source): source is GroundingSource => source !== null)
+	}
 
-		if (citationLinks.length > 0) {
-			return citationLinks.join(", ")
+	private extractCitationsOnly(groundingMetadata?: GroundingMetadata): string | null {
+		const sources = this.extractGroundingSources(groundingMetadata)
+
+		if (sources.length === 0) {
+			return null
 		}
 
-		return null
+		const citationLinks = sources.map((source, i) => `[${i + 1}](${source.url})`)
+		return citationLinks.join(", ")
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
@@ -276,10 +294,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		outputTokens: number
 		cacheReadTokens?: number
 	}) {
-		if (!info.inputPrice || !info.outputPrice || !info.cacheReadsPrice) {
-			return undefined
-		}
-
+		// For models with tiered pricing, prices might only be defined in tiers
 		let inputPrice = info.inputPrice
 		let outputPrice = info.outputPrice
 		let cacheReadsPrice = info.cacheReadsPrice
@@ -294,6 +309,16 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				outputPrice = tier.outputPrice ?? outputPrice
 				cacheReadsPrice = tier.cacheReadsPrice ?? cacheReadsPrice
 			}
+		}
+
+		// Check if we have the required prices after considering tiers
+		if (!inputPrice || !outputPrice) {
+			return undefined
+		}
+
+		// cacheReadsPrice is optional - if not defined, treat as 0
+		if (!cacheReadsPrice) {
+			cacheReadsPrice = 0
 		}
 
 		// Subtract the cached input tokens from the total input tokens.

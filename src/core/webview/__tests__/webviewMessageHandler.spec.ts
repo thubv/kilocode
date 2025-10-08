@@ -1,3 +1,5 @@
+// npx vitest core/webview/__tests__/webviewMessageHandler.spec.ts
+
 import type { Mock } from "vitest"
 
 // Mock dependencies - must come before imports
@@ -32,10 +34,9 @@ const mockClineProvider = {
 	},
 	log: vi.fn(),
 	postStateToWebview: vi.fn(),
-	getCurrentCline: vi.fn(),
+	getCurrentTask: vi.fn(),
 	getTaskWithId: vi.fn(),
-	initClineWithHistoryItem: vi.fn(),
-	getMcpHub: vi.fn(),
+	createTaskWithHistoryItem: vi.fn(),
 } as unknown as ClineProvider
 
 import { t } from "../../../i18n"
@@ -44,6 +45,7 @@ vi.mock("vscode", () => ({
 	window: {
 		showInformationMessage: vi.fn(),
 		showErrorMessage: vi.fn(),
+		createTextEditorDecorationType: vi.fn(() => ({ dispose: vi.fn() })), // kilocode_change
 	},
 	workspace: {
 		workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
@@ -137,6 +139,48 @@ describe("webviewMessageHandler - requestLmStudioModels", () => {
 	})
 })
 
+describe("webviewMessageHandler - requestOllamaModels", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			apiConfiguration: {
+				ollamaModelId: "model-1",
+				ollamaBaseUrl: "http://localhost:1234",
+			},
+		})
+	})
+
+	it("successfully fetches models from Ollama", async () => {
+		const mockModels: ModelRecord = {
+			"model-1": {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsPromptCache: false,
+				description: "Test model 1",
+			},
+			"model-2": {
+				maxTokens: 8192,
+				contextWindow: 16384,
+				supportsPromptCache: false,
+				description: "Test model 2",
+			},
+		}
+
+		mockGetModels.mockResolvedValue(mockModels)
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "requestOllamaModels",
+		})
+
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "ollama", baseUrl: "http://localhost:1234" })
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "ollamaModels",
+			ollamaModels: mockModels,
+		})
+	})
+})
+
 describe("webviewMessageHandler - requestRouterModels", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -146,8 +190,10 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 			},
 		})
 	})
@@ -175,28 +221,39 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		})
 
 		// Verify getModels was called for each provider
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "deepinfra" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
 		})
+		// Note: huggingface is not fetched in requestRouterModels - it has its own handler
+		// Note: io-intelligence is not fetched because no API key is provided in the mock state
 
 		// Verify response was sent
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
+				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
+				ovhcloud: mockModels, // kilocode_change
 			},
 		})
 	})
@@ -208,6 +265,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 				// Missing litellm config
 			},
 		})
@@ -246,6 +304,10 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				// kilocode_change start
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				chutesApiKey: "chutes-key",
+				// kilocode_change end
 				// Missing litellm config
 			},
 		})
@@ -277,14 +339,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
+				chutes: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
+				ovhcloud: mockModels, // kilocode_change
 			},
 		})
 	})
@@ -305,8 +373,12 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
+			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
+			.mockResolvedValueOnce(mockModels) // deepinfra
+			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -317,14 +389,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
+				chutes: {}, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: {},
+				ovhcloud: mockModels, // kilocode_change
 				lmstudio: {},
+				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 
@@ -343,6 +421,15 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
+		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Chutes API error",
+			values: { provider: "chutes" },
+		})
+		// kilocode_change end
+
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -358,8 +445,12 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
+			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
+			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
+			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
+			.mockRejectedValueOnce(new Error("OVHCloud AI Endpoints error")) // ovhcloud // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -395,12 +486,37 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
+		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Chutes API error",
+			values: { provider: "chutes" },
+		})
+		// kilocode_change end
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "DeepInfra API error",
+			values: { provider: "deepinfra" },
+		})
+
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
+
+		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "OVHCloud AI Endpoints error",
+			values: { provider: "ovhcloud" },
+		})
+		// kilocode_change end
 	})
 
 	it("prefers config values over message values for LiteLLM", async () => {
@@ -541,7 +657,7 @@ describe("webviewMessageHandler - message dialog preferences", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		// Mock a current Cline instance
-		vi.mocked(mockClineProvider.getCurrentCline).mockReturnValue({
+		vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue({
 			taskId: "test-task-id",
 			apiConversationHistory: [],
 			clineMessages: [],
@@ -552,7 +668,10 @@ describe("webviewMessageHandler - message dialog preferences", () => {
 
 	describe("deleteMessage", () => {
 		it("should always show dialog for delete confirmation", async () => {
-			vi.mocked(mockClineProvider.getCurrentCline).mockReturnValue({} as any) // Mock current cline exists
+			vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue({
+				clineMessages: [],
+				apiConversationHistory: [],
+			} as any) // Mock current cline with proper structure
 
 			await webviewMessageHandler(mockClineProvider, {
 				type: "deleteMessage",
@@ -562,24 +681,30 @@ describe("webviewMessageHandler - message dialog preferences", () => {
 			expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 				type: "showDeleteMessageDialog",
 				messageTs: 123456789,
+				hasCheckpoint: false,
 			})
 		})
 	})
 
 	describe("submitEditedMessage", () => {
 		it("should always show dialog for edit confirmation", async () => {
-			vi.mocked(mockClineProvider.getCurrentCline).mockReturnValue({} as any) // Mock current cline exists
+			vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue({
+				clineMessages: [],
+				apiConversationHistory: [],
+			} as any) // Mock current cline with proper structure
 
 			await webviewMessageHandler(mockClineProvider, {
 				type: "submitEditedMessage",
-				value: 123456789, // messageTs as number
-				editedMessageContent: "edited content", // text content in editedMessageContent field
+				value: 123456789,
+				editedMessageContent: "edited content",
 			})
 
 			expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 				type: "showEditMessageDialog",
 				messageTs: 123456789,
 				text: "edited content",
+				hasCheckpoint: false,
+				images: undefined,
 			})
 		})
 	})
@@ -596,138 +721,43 @@ describe("webviewMessageHandler - mcpEnabled", () => {
 			handleMcpEnabledChange: vi.fn().mockResolvedValue(undefined),
 		}
 
-		// Mock the getMcpHub method to return our mock McpHub
-		mockClineProvider.getMcpHub = vi.fn().mockReturnValue(mockMcpHub)
-
-		// Reset the contextProxy getValue mock
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(undefined)
+		// Ensure provider exposes getMcpHub and returns our mock
+		;(mockClineProvider as any).getMcpHub = vi.fn().mockReturnValue(mockMcpHub)
 	})
 
-	it("should not refresh MCP servers when value does not change (true to true)", async () => {
-		// Setup: mcpEnabled is already true
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(true)
-
-		// Act: Send mcpEnabled message with same value
+	it("delegates enable=true to McpHub and posts updated state", async () => {
 		await webviewMessageHandler(mockClineProvider, {
 			type: "mcpEnabled",
 			bool: true,
 		})
 
-		// Assert: handleMcpEnabledChange should not be called
-		expect(mockMcpHub.handleMcpEnabledChange).not.toHaveBeenCalled()
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", true)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
-	})
-
-	it("should not refresh MCP servers when value does not change (false to false)", async () => {
-		// Setup: mcpEnabled is already false
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(false)
-
-		// Act: Send mcpEnabled message with same value
-		await webviewMessageHandler(mockClineProvider, {
-			type: "mcpEnabled",
-			bool: false,
-		})
-
-		// Assert: handleMcpEnabledChange should not be called
-		expect(mockMcpHub.handleMcpEnabledChange).not.toHaveBeenCalled()
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", false)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
-	})
-
-	it("should refresh MCP servers when value changes from true to false", async () => {
-		// Setup: mcpEnabled is true
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(true)
-
-		// Act: Send mcpEnabled message with false
-		await webviewMessageHandler(mockClineProvider, {
-			type: "mcpEnabled",
-			bool: false,
-		})
-
-		// Assert: handleMcpEnabledChange should be called
-		expect(mockMcpHub.handleMcpEnabledChange).toHaveBeenCalledWith(false)
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", false)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
-	})
-
-	it("should refresh MCP servers when value changes from false to true", async () => {
-		// Setup: mcpEnabled is false
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(false)
-
-		// Act: Send mcpEnabled message with true
-		await webviewMessageHandler(mockClineProvider, {
-			type: "mcpEnabled",
-			bool: true,
-		})
-
-		// Assert: handleMcpEnabledChange should be called
+		expect((mockClineProvider as any).getMcpHub).toHaveBeenCalledTimes(1)
+		expect(mockMcpHub.handleMcpEnabledChange).toHaveBeenCalledTimes(1)
 		expect(mockMcpHub.handleMcpEnabledChange).toHaveBeenCalledWith(true)
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", true)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
+		expect(mockClineProvider.postStateToWebview).toHaveBeenCalledTimes(1)
 	})
 
-	it("should handle undefined values with defaults correctly", async () => {
-		// Setup: mcpEnabled is undefined (defaults to true)
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(undefined)
-
-		// Act: Send mcpEnabled message with undefined (defaults to true)
-		await webviewMessageHandler(mockClineProvider, {
-			type: "mcpEnabled",
-			bool: undefined,
-		})
-
-		// Assert: Should use default value (true) and not trigger refresh since both are true
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", true)
-		expect(mockMcpHub.handleMcpEnabledChange).not.toHaveBeenCalled()
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
-	})
-
-	it("should handle when mcpEnabled changes from undefined to false", async () => {
-		// Setup: mcpEnabled is undefined (defaults to true)
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(undefined)
-
-		// Act: Send mcpEnabled message with false
+	it("delegates enable=false to McpHub and posts updated state", async () => {
 		await webviewMessageHandler(mockClineProvider, {
 			type: "mcpEnabled",
 			bool: false,
 		})
 
-		// Assert: Should trigger refresh since undefined defaults to true and we're changing to false
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", false)
+		expect((mockClineProvider as any).getMcpHub).toHaveBeenCalledTimes(1)
+		expect(mockMcpHub.handleMcpEnabledChange).toHaveBeenCalledTimes(1)
 		expect(mockMcpHub.handleMcpEnabledChange).toHaveBeenCalledWith(false)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
+		expect(mockClineProvider.postStateToWebview).toHaveBeenCalledTimes(1)
 	})
 
-	it("should not call handleMcpEnabledChange when McpHub is not available", async () => {
-		// Setup: No McpHub instance available
-		mockClineProvider.getMcpHub = vi.fn().mockReturnValue(null)
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(true)
+	it("handles missing McpHub instance gracefully and still posts state", async () => {
+		;(mockClineProvider as any).getMcpHub = vi.fn().mockReturnValue(undefined)
 
-		// Act: Send mcpEnabled message with false
-		await webviewMessageHandler(mockClineProvider, {
-			type: "mcpEnabled",
-			bool: false,
-		})
-
-		// Assert: State should be updated but handleMcpEnabledChange should not be called
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", false)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
-		// No error should be thrown
-	})
-
-	it("should always update state even when value doesn't change", async () => {
-		// Setup: mcpEnabled is true
-		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue(true)
-
-		// Act: Send mcpEnabled message with same value
 		await webviewMessageHandler(mockClineProvider, {
 			type: "mcpEnabled",
 			bool: true,
 		})
 
-		// Assert: State should still be updated to ensure consistency
-		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("mcpEnabled", true)
-		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled()
+		expect((mockClineProvider as any).getMcpHub).toHaveBeenCalledTimes(1)
+		expect(mockClineProvider.postStateToWebview).toHaveBeenCalledTimes(1)
 	})
 })

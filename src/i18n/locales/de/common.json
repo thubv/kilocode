@@ -10,10 +10,10 @@
 	},
 	"feedback": {
 		"title": "Feedback",
-		"description": "Wir würden gerne Ihr Feedback hören oder Ihnen bei Problemen helfen, die Sie erleben.",
+		"description": "Wir würden gerne dein Feedback hören, um dir bei allen Problemen zu helfen.",
 		"githubIssues": "Ein Problem auf GitHub melden",
 		"githubDiscussions": "An GitHub-Diskussionen teilnehmen",
-		"discord": "Treten Sie unserer Discord-Community bei",
+		"discord": "Trete unserer Discord-Community bei",
 		"customerSupport": "Kundensupport"
 	},
 	"welcome": "Willkommen, {{name}}! Du hast {{count}} Benachrichtigungen.",
@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Zeitüberschreitung beim Versuch, den Checkpoint wiederherzustellen.",
 		"checkpoint_failed": "Fehler beim Wiederherstellen des Checkpoints.",
 		"git_not_installed": "Git ist für die Checkpoint-Funktion erforderlich. Bitte installiere Git, um Checkpoints zu aktivieren.",
+		"nested_git_repos_warning": "Checkpoints sind deaktiviert, da ein verschachteltes Git-Repository erkannt wurde unter: {{path}}. Um Checkpoints zu verwenden, entferne oder verschiebe bitte dieses verschachtelte Git-Repository.",
 		"no_workspace": "Bitte öffne zuerst einen Projektordner",
 		"update_support_prompt": "Fehler beim Aktualisieren der Support-Nachricht",
 		"reset_support_prompt": "Fehler beim Zurücksetzen der Support-Nachricht",
@@ -50,7 +51,7 @@
 		"delete_api_config": "Fehler beim Löschen der API-Konfiguration",
 		"list_api_config": "Fehler beim Abrufen der API-Konfigurationsliste",
 		"update_server_timeout": "Fehler beim Aktualisieren des Server-Timeouts",
-		"hmr_not_running": "Der lokale Entwicklungsserver läuft nicht, HMR wird nicht funktionieren. Bitte führen Sie 'npm run dev' vor dem Start der Erweiterung aus, um HMR zu aktivieren.",
+		"hmr_not_running": "Der lokale Entwicklungsserver läuft nicht, HMR wird nicht funktionieren. Bitte führe 'npm run dev' vor dem Start der Erweiterung aus, um HMR zu aktivieren.",
 		"retrieve_current_mode": "Fehler beim Abrufen des aktuellen Modus aus dem Zustand.",
 		"failed_delete_repo": "Fehler beim Löschen des zugehörigen Shadow-Repositorys oder -Zweigs: {{error}}",
 		"failed_remove_directory": "Fehler beim Entfernen des Aufgabenverzeichnisses: {{error}}",
@@ -105,6 +106,15 @@
 			"apiError": "Gemini CLI API-Fehler: {{error}}",
 			"completionError": "Gemini CLI Vervollständigungsfehler: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Keine aktive Aufgabe, aus der Nachrichten gelöscht werden können",
+			"invalid_timestamp_for_deletion": "Ungültiger Nachrichten-Zeitstempel zum Löschen",
+			"cannot_delete_missing_timestamp": "Nachricht kann nicht gelöscht werden: fehlender Zeitstempel",
+			"cannot_delete_invalid_timestamp": "Nachricht kann nicht gelöscht werden: ungültiger Zeitstempel",
+			"message_not_found": "Nachricht mit Zeitstempel {{messageTs}} nicht gefunden",
+			"error_deleting_message": "Fehler beim Löschen der Nachricht: {{error}}",
+			"error_editing_message": "Fehler beim Bearbeiten der Nachricht: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Fehler beim Generieren des Kontext-Streams von Gemini: {{error}}",
 			"generate_complete_prompt": "Fehler bei der Vervollständigung durch Gemini: {{error}}",
@@ -118,7 +128,21 @@
 			"genericError": "Cerebras API-Fehler ({{status}}): {{message}}",
 			"noResponseBody": "Cerebras API-Fehler: Kein Antworttext vorhanden",
 			"completionError": "Cerebras-Vervollständigungsfehler: {{error}}"
-		}
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Fehler beim Laden der OAuth-Anmeldedaten. Bitte authentifiziere dich zuerst: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo-Anbieter erfordert Cloud-Authentifizierung. Bitte melde dich bei Roo Code Cloud an."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API-Schlüssel enthält ungültige Zeichen."
+		},
+		"manual_url_empty": "Bitte gib eine gültige Callback-URL ein",
+		"manual_url_no_query": "Ungültige Callback-URL: Query-Parameter fehlen",
+		"manual_url_missing_params": "Ungültige Callback-URL: erforderliche Parameter (code und state) fehlen",
+		"manual_url_auth_failed": "Manuelle URL-Authentifizierung fehlgeschlagen",
+		"manual_url_auth_error": "Authentifizierung fehlgeschlagen"
 	},
 	"warnings": {
 		"no_terminal_content": "Kein Terminal-Inhalt ausgewählt",
@@ -157,6 +181,10 @@
 		"deleted": "Aufgabenfehler: Die Aufgabe wurde vom Benutzer gestoppt und gelöscht.",
 		"incomplete": "Aufgabe #{{taskNumber}} (Unvollständig)",
 		"no_messages": "Aufgabe #{{taskNumber}} (Keine Nachrichten)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "Antwort vom Benutzer unterbrochen",
+		"responseInterruptedByApiError": "Antwort durch API-Fehler unterbrochen"
 	},
 	"storage": {
 		"prompt_custom_path": "Gib den benutzerdefinierten Speicherpfad für den Gesprächsverlauf ein, leer lassen für Standardspeicherort",
@@ -206,6 +234,9 @@
 			"cloud_auth_required": "Deine Organisation erfordert eine Kilo Code Cloud-Authentifizierung. Bitte melde dich an, um fortzufahren.",
 			"organization_mismatch": "Du musst mit dem Kilo Code Cloud-Konto deiner Organisation authentifiziert sein.",
 			"verification_failed": "Die Organisationsauthentifizierung konnte nicht verifiziert werden."
+		},
+		"info": {
+			"organization_requires_auth": "Deine Organisation erfordert eine Authentifizierung."
 		}
 	},
 	"prompts": {
@@ -220,5 +251,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Aufgabenabschluss verhindern, wenn unvollständige Todos in der Todo-Liste vorhanden sind"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Fehler",
+		"reportText": "Bitte melde diesen Fehler, um uns bei der Verbesserung der Anwendung zu helfen.",
+		"githubText": "Auf GitHub melden",
+		"copyInstructions": "Kopiere die unten stehenden Fehlerdetails:",
+		"errorStack": "Fehler-Stack",
+		"componentStack": "Komponenten-Stack"
 	}
 }

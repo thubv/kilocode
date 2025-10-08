@@ -9,10 +9,25 @@ import {
 	isSecretStateKey,
 	ProviderSettingsEntry,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
+	getModelId,
+	type ProviderName,
+	type RooModelId,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Mode, modes } from "../../shared/modes"
+import { migrateMorphApiKey } from "./kilocode/migrateMorphApiKey"
+
+// Type-safe model migrations mapping
+type ModelMigrations = {
+	[K in ProviderName]?: Record<string, string>
+}
+
+const MODEL_MIGRATIONS: ModelMigrations = {
+	roo: {
+		"roo/code-supernova": "roo/code-supernova-1-million" as RooModelId,
+	},
+} as const satisfies ModelMigrations
 
 export interface SyncCloudProfilesResult {
 	hasChanges: boolean
@@ -32,6 +47,7 @@ export const providerProfilesSchema = z.object({
 			openAiHeadersMigrated: z.boolean().optional(),
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
+			morphApiKeyMigrated: z.boolean().optional(), // kilocode_change: Morph API key migration
 		})
 		.optional(),
 })
@@ -107,6 +123,11 @@ export class ProviderSettingsManager {
 					isDirty = true
 				}
 
+				// Apply model migrations for all providers
+				if (this.applyModelMigrations(providerProfiles)) {
+					isDirty = true
+				}
+
 				// Ensure all configs have IDs.
 				for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
 					if (!apiConfig.id) {
@@ -123,6 +144,7 @@ export class ProviderSettingsManager {
 						openAiHeadersMigrated: false,
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
+						morphApiKeyMigrated: false, // kilocode_change: Morph API key migration
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -156,6 +178,14 @@ export class ProviderSettingsManager {
 					providerProfiles.migrations.todoListEnabledMigrated = true
 					isDirty = true
 				}
+
+				// kilocode_change start
+				if (!providerProfiles.migrations.morphApiKeyMigrated) {
+					const result = await migrateMorphApiKey(this.context, providerProfiles)
+					providerProfiles.migrations.morphApiKeyMigrated = true
+					isDirty ||= result
+				}
+				// kilocode_change end
 
 				if (isDirty) {
 					await this.store(providerProfiles)
@@ -275,6 +305,58 @@ export class ProviderSettingsManager {
 	}
 
 	/**
+	 * Apply model migrations for all providers
+	 * Returns true if any migrations were applied
+	 */
+	private applyModelMigrations(providerProfiles: ProviderProfiles): boolean {
+		let migrated = false
+
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				// Skip configs without provider or model ID
+				if (!apiConfig.apiProvider || !apiConfig.apiModelId) {
+					continue
+				}
+
+				// Check if this provider has migrations (with type safety)
+				const provider = apiConfig.apiProvider as ProviderName
+				const providerMigrations = MODEL_MIGRATIONS[provider]
+				if (!providerMigrations) {
+					continue
+				}
+
+				// Check if the current model ID needs migration
+				const newModelId = providerMigrations[apiConfig.apiModelId]
+				if (newModelId && newModelId !== apiConfig.apiModelId) {
+					console.log(
+						`[ModelMigration] Migrating ${apiConfig.apiProvider} model from ${apiConfig.apiModelId} to ${newModelId}`,
+					)
+					apiConfig.apiModelId = newModelId
+					migrated = true
+				}
+			}
+		} catch (error) {
+			console.error(`[ModelMigration] Failed to apply model migrations:`, error)
+		}
+
+		return migrated
+	}
+
+	/**
+	 * Clean model ID by removing prefix before "/"
+	 */
+	private cleanModelId(modelId: string | undefined): string | undefined {
+		if (!modelId) return undefined
+
+		// Check for "/" and take the part after it
+		if (modelId.includes("/")) {
+			return modelId.split("/").pop()
+		}
+
+		return modelId
+	}
+
+	/**
 	 * List all available configs with metadata.
 	 */
 	public async listConfig(): Promise<ProviderSettingsEntry[]> {
@@ -286,6 +368,7 @@ export class ProviderSettingsManager {
 					name,
 					id: apiConfig.id || "",
 					apiProvider: apiConfig.apiProvider,
+					modelId: this.cleanModelId(getModelId(apiConfig)),
 				}))
 			})
 		} catch (error) {

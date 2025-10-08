@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Chào mừng bạn đến với Kilo Code!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
-		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, và hơn 450 mô hình khác.",
-		"introText3": "Tạo tài khoản miễn phí và nhận token trị giá $20 để sử dụng với bất kỳ mô hình AI nào.",
+		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, và hơn 450 mô hình khác.",
+		"introText3": "Tạo tài khoản miễn phí và nhận $20 tín dụng thưởng khi nạp tiền lần đầu.",
 		"ctaButton": "Bắt đầu",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn",
 		"alreadySignedUp": "Đã đăng ký?",
@@ -13,10 +13,23 @@
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp"
 	},
+	"pagination": {
+		"previous": "Trước",
+		"next": "Tiếp",
+		"page": "Trang {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Giai đoạn alpha cho {{model}} đã kết thúc! Chuyển sang mô hình khác để tiếp tục.",
+		"notAllowedForTeam": "⚠️ Tổ chức của bạn không cho phép sử dụng mô hình {{model}}. Chuyển sang mô hình khác để tiếp tục.",
+		"modelUnavailable": "⚠️ Mô hình {{model}} không khả dụng. Chuyển sang mô hình khác để tiếp tục.",
+		"continueWith": "Tiếp tục với {{model}}",
+		"continue": "Tiếp tục"
+	},
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
-		"discoverModelPricing": "Khám phá giá cả và khả năng của mô hình"
+		"freeModelsDescription": "Các mô hình miễn phí có thể có giới hạn tốc độ. Sử dụng liên kết dưới đây để tối ưu hóa việc sử dụng mô hình miễn phí của bạn!",
+		"freeModelsLink": "Khám phá các tùy chọn mô hình miễn phí"
 	},
 	"notifications": {
 		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
@@ -39,10 +52,37 @@
 			"login": "Đăng nhập vào Kilo Code",
 			"logout": "Đăng xuất khỏi Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - Định tuyến nhà cung cấp OpenRouter",
-				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này."
+				"title": "Định tuyến nhà cung cấp",
+				"managedByOrganization": "Cài đặt Định tuyến nhà cung cấp được quản lý bởi tổ chức của bạn.",
+				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
+				"sorting": {
+					"default": "Sắp xếp nhà cung cấp mặc định",
+					"price": "Ưu tiên nhà cung cấp có giá thấp hơn",
+					"throughput": "Ưu tiên nhà cung cấp có thông lượng cao hơn",
+					"latency": "Ưu tiên nhà cung cấp có độ trễ thấp hơn"
+				},
+				"dataCollection": {
+					"default": "Không thiết lập chính sách dữ liệu",
+					"allowFree": "Cho phép huấn luyện prompt (chỉ miễn phí)",
+					"allow": "Cho phép huấn luyện prompt",
+					"deny": "Từ chối huấn luyện prompt",
+					"zdr": "Không lưu trữ dữ liệu"
+				}
 			},
 			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
+		},
+		"modelInfo": {
+			"contextWindow": "Cửa sổ ngữ cảnh",
+			"providerBreakdown": "Phân tích Giá và Khả năng của Nhà cung cấp",
+			"averageKiloCodeCost": "Đây là chi phí thực tế trung bình mà Kilo Code đã chi tiêu khi sử dụng mô hình này trong tuần qua. Chi phí này có thể thấp hơn giá niêm yết do việc sử dụng bộ nhớ đệm prompt.",
+			"table": {
+				"provider": "Nhà cung cấp",
+				"context": "Điểm cuối có thể xử lý số lượng token này (đầu vào + đầu ra).",
+				"inputPrice": "Chi phí cho một triệu token đối với prompt.",
+				"outputPrice": "Chi phí cho một triệu token đối với completion.",
+				"cacheReadPrice": "Chi phí cho một triệu token để đọc từ bộ nhớ đệm.",
+				"cacheWritePrice": "Chi phí cho một triệu token để ghi vào bộ nhớ đệm."
+			}
 		},
 		"systemNotifications": {
 			"label": "Bật thông báo hệ thống",
@@ -66,7 +106,11 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
 			"condenseConversation": "Tóm tắt cuộc trò chuyện"
-		}
+		},
+		"seeNewChanges": "Hiển thị thay đổi mới",
+		"revertNewChanges": "Hoàn tác thay đổi mới",
+		"confirmRevertChanges": "Xác nhận hoàn tác thay đổi",
+		"cancelRevertChanges": "Hủy hoàn tác thay đổi"
 	},
 	"newTaskPreview": {
 		"task": "Nhiệm vụ"
@@ -77,6 +121,8 @@
 		"logOut": "Đăng xuất",
 		"currentBalance": "SỐ DƯ HIỆN TẠI",
 		"loading": "Đang tải...",
+		"organization": "Tổ chức",
+		"personal": "Cá nhân",
 		"shop": {
 			"title": "Mua Tín dụng",
 			"popular": "Phổ biến",
@@ -159,33 +205,27 @@
 		}
 	},
 	"ghost": {
-		"title": "Hỗ trợ nội tuyến",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Kích hoạt tự động",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Nhiệm vụ nhanh trong dòng",
-				"description": "Chỉ cần thay đổi nhanh? Chọn một đoạn code (hoặc không cần!) và nhấn Cmd+I. Mô tả mục tiêu của bạn bằng ngôn ngữ đơn giản (\"tạo một component React với các props này\", \"thêm xử lý lỗi vào hàm này\"), và nhận nhiều gợi ý sẵn sàng sử dụng ngay trong trình soạn thảo của bạn. <DocsLink>Xem phím tắt</DocsLink>"
-			},
+			"triggers": "Bộ Kích Hoạt",
+			"keybindingDescription": "Các tính năng Autocomplete có thể được kích hoạt bằng lệnh. Bạn có thể cấu hình <DocsLink>Phím Tắt ở đây</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Bật kích hoạt tự động",
-				"description": "Khi được bật, Kilo Code sẽ tự động kích hoạt Trợ lý nội tuyến khi bạn ngừng gõ. Điều này có thể hữu ích cho các sửa lỗi và gợi ý nhanh."
+				"label": "Bật Autocomplete",
+				"description": "Khi được bật, Kilo Code sẽ tự động kích hoạt Autocomplete khi bạn ngừng gõ. Điều này có thể hữu ích cho các sửa chữa nhanh và gợi ý."
 			},
 			"autoTriggerDelay": {
-				"label": "Độ trễ kích hoạt tự động",
-				"description": "Độ trễ tính bằng giây trước khi Kilo Code kích hoạt Trợ lý nội tuyến sau khi bạn ngừng gõ. Độ trễ thấp hơn có nghĩa là gợi ý nhanh hơn nhưng có thể tốn nhiều tài nguyên hơn."
+				"label": "Độ Trễ Kích Hoạt Tự Động",
+				"description": "Độ trễ tính bằng giây trước khi Kilo Code kích hoạt Autocomplete sau khi bạn ngừng gõ. Độ trễ ngắn hơn có nghĩa là gợi ý nhanh hơn, nhưng có thể tốn nhiều tài nguyên hơn."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tác vụ nhanh ({{keybinding}})",
+				"description": "Chỉ cần một thay đổi nhanh? Chọn một số mã (hoặc không!) và nhấn Cmd+I. Mô tả mục tiêu của bạn bằng tiếng Việt đơn giản (\"tạo component React với những props này\", \"thêm xử lý lỗi vào hàm này\"), và nhận nhiều gợi ý sẵn sàng sử dụng ngay trong editor của bạn. <DocsLink>Xem phím tắt</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Tác vụ thông minh nội tuyến",
-				"description": "Cần sửa nhanh, hoàn thiện hay cấu trúc lại code? Kilo sẽ sử dụng ngữ cảnh xung quanh để đưa ra các cải tiến ngay lập tức, giúp bạn duy trì nhịp độ làm việc. <DocsLink>Xem phím tắt</DocsLink>"
+				"label": "Tự động hoàn thành thủ công ({{keybinding}})",
+				"description": "Cần sửa chữa nhanh, hoàn thành, hoặc tái cấu trúc? Kilo sẽ sử dụng ngữ cảnh xung quanh để cung cấp cải tiến ngay lập tức, giữ bạn trong luồng làm việc. <DocsLink>Xem phím tắt</DocsLink>"
 			},
-			"provider": "Nhà cung cấp",
-			"apiConfigId": {
-				"label": "Cấu hình API",
-				"current": "Sử dụng cấu hình API hiện đang được chọn",
-				"description": "Chọn một cấu hình API để sử dụng cho các lời nhắc Hỗ trợ nội tuyến hoặc chỉ sử dụng bất cứ thứ gì được chọn hiện tại"
-			},
-			"triggers": "Các yếu tố kích hoạt",
-			"keybindingDescription": "Các tính năng Trợ giúp Nội tuyến được kích hoạt bằng các lệnh. Bạn có thể cấu hình <DocsLink>phím tắt tại đây</DocsLink>."
+			"keybindingNotFound": "không tìm thấy"
 		}
 	},
 	"virtualProvider": {
@@ -209,5 +249,10 @@
 		"perMinute": "Mỗi Phút",
 		"perHour": "Một Giờ",
 		"requestsLabel": "Yêu cầu"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Hình ảnh không được hỗ trợ bởi mô hình hiện tại.",
+		"maxImagesReached": "Tối đa 20 hình ảnh cho mỗi tin nhắn. Hãy xóa một số hình ảnh để thêm được nhiều hơn.",
+		"imagesRemovedNoSupport": "Hình ảnh đã bị xóa, không được mô hình hỗ trợ."
 	}
 }

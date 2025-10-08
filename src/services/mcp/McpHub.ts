@@ -30,7 +30,7 @@ import {
 	McpToolCallResponse,
 } from "../../shared/mcp"
 import { fileExistsAtPath } from "../../utils/fs"
-import { arePathsEqual } from "../../utils/path"
+import { arePathsEqual, getWorkspacePath } from "../../utils/path"
 import { injectVariables } from "../../utils/config"
 import { NotificationService } from "./kilocode/NotificationService"
 
@@ -168,7 +168,7 @@ export class McpHub {
 	 */
 	public registerClient(): void {
 		this.refCount++
-		console.log(`McpHub: Client registered. Ref count: ${this.refCount}`)
+		// console.log(`McpHub: Client registered. Ref count: ${this.refCount}`)
 	}
 
 	/**
@@ -177,7 +177,9 @@ export class McpHub {
 	 */
 	public async unregisterClient(): Promise<void> {
 		this.refCount--
-		console.log(`McpHub: Client unregistered. Ref count: ${this.refCount}`)
+
+		// console.log(`McpHub: Client unregistered. Ref count: ${this.refCount}`)
+
 		if (this.refCount <= 0) {
 			console.log("McpHub: Last client unregistered. Disposing hub.")
 			await this.dispose()
@@ -349,7 +351,7 @@ export class McpHub {
 			return
 		}
 
-		const workspaceFolder = vscode.workspace.workspaceFolders[0]
+		const workspaceFolder = this.providerRef.deref()?.cwd ?? getWorkspacePath()
 		const projectMcpPattern = new vscode.RelativePattern(workspaceFolder, ".kilocode/mcp.json")
 
 		// Create a file system watcher for the project MCP file pattern
@@ -551,15 +553,8 @@ export class McpHub {
 
 	// Get project-level MCP configuration path
 	private async getProjectMcpPath(): Promise<string | null> {
-		if (!vscode.workspace.workspaceFolders?.length) {
-			return null
-		}
-
-		const workspaceFolder = vscode.workspace.workspaceFolders[0]
-		// kilocode_change
-		// First, we try the standard location: .kilocode/mcp.json
-		// If not found, fall back to .mcp.json in the project root
-		const projectMcpDir = path.join(workspaceFolder.uri.fsPath, ".kilocode")
+		const workspacePath = this.providerRef.deref()?.cwd ?? getWorkspacePath()
+		const projectMcpDir = path.join(workspacePath, ".kilocode")
 		const projectMcpPath = path.join(projectMcpDir, "mcp.json")
 
 		try {
@@ -567,7 +562,7 @@ export class McpHub {
 			return projectMcpPath
 		} catch {
 			// If not found in .kilocode/, fall back to .mcp.json in root directory
-			const rootMcpPath = path.join(workspaceFolder.uri.fsPath, ".mcp.json")
+			const rootMcpPath = path.join(workspacePath, ".mcp.json")
 			try {
 				await fs.access(rootMcpPath)
 				return rootMcpPath
@@ -1226,7 +1221,6 @@ export class McpHub {
 
 	public async refreshAllConnections(): Promise<void> {
 		if (this.isConnecting) {
-			vscode.window.showInformationMessage(t("mcp:info.already_refreshing"))
 			return
 		}
 
@@ -1248,7 +1242,6 @@ export class McpHub {
 		}
 
 		this.isConnecting = true
-		vscode.window.showInformationMessage(t("mcp:info.refreshing_all"))
 
 		try {
 			const globalPath = await this.getMcpSettingsFilePath()
@@ -1258,11 +1251,6 @@ export class McpHub {
 				const globalConfig = JSON.parse(globalContent)
 				globalServers = globalConfig.mcpServers || {}
 				const globalServerNames = Object.keys(globalServers)
-				vscode.window.showInformationMessage(
-					t("mcp:info.global_servers_active", {
-						mcpServers: `${globalServerNames.join(", ") || "none"}`,
-					}),
-				)
 			} catch (error) {
 				console.log("Error reading global MCP config:", error)
 			}
@@ -1275,11 +1263,6 @@ export class McpHub {
 					const projectConfig = JSON.parse(projectContent)
 					projectServers = projectConfig.mcpServers || {}
 					const projectServerNames = Object.keys(projectServers)
-					vscode.window.showInformationMessage(
-						t("mcp:info.project_servers_active", {
-							mcpServers: `${projectServerNames.join(", ") || "none"}`,
-						}),
-					)
 				} catch (error) {
 					console.log("Error reading project MCP config:", error)
 				}
@@ -1299,8 +1282,6 @@ export class McpHub {
 			await delay(100)
 
 			await this.notifyWebviewOfServerChanges()
-
-			vscode.window.showInformationMessage(t("mcp:info.all_refreshed"))
 		} catch (error) {
 			this.showErrorMessage("Failed to refresh MCP servers", error)
 		} finally {
