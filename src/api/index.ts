@@ -33,7 +33,6 @@ import {
 	LiteLLMHandler,
 	// kilocode_change start
 	VirtualQuotaFallbackHandler,
-	GeminiCliHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
