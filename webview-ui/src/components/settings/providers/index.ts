@@ -28,7 +28,6 @@ export { Vertex } from "./Vertex"
 export { VSCodeLM } from "./VSCodeLM"
 export { XAI } from "./XAI"
 // kilocode_change start
-export { GeminiCli } from "./GeminiCli"
 export { VirtualQuotaFallbackProvider } from "./VirtualQuotaFallbackProvider"
 // kilocode_change end
 export { ZAi } from "./ZAi"

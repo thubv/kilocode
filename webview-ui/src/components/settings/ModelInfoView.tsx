@@ -60,43 +60,6 @@ export const ModelInfoView = ({
 			supportsLabel={t("settings:modelInfo.supportsPromptCache")}
 			doesNotSupportLabel={t("settings:modelInfo.noPromptCache")}
 		/>,
-		typeof modelInfo?.maxTokens === "number" && modelInfo.maxTokens > 0 && (
-			<>
-				<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
-				{modelInfo.maxTokens?.toLocaleString()} tokens
-			</>
-		),
-		kiloCodeTrustsThePricing && modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
-			<>
-				<span className="font-medium">{t("settings:modelInfo.inputPrice")}:</span>{" "}
-				{formatPrice(modelInfo.inputPrice)} / 1M tokens
-			</>
-		),
-		kiloCodeTrustsThePricing && modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
-			<>
-				<span className="font-medium">{t("settings:modelInfo.outputPrice")}:</span>{" "}
-				{formatPrice(modelInfo.outputPrice)} / 1M tokens
-			</>
-		),
-		kiloCodeTrustsThePricing && modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
-			<>
-				<span className="font-medium">{t("settings:modelInfo.cacheReadsPrice")}:</span>{" "}
-				{formatPrice(modelInfo.cacheReadsPrice || 0)} / 1M tokens
-			</>
-		),
-		kiloCodeTrustsThePricing && modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
-			<>
-				<span className="font-medium">{t("settings:modelInfo.cacheWritesPrice")}:</span>{" "}
-				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1M tokens
-			</>
-		),
-		!kiloCodeTrustsThePricing && selectedModelId && (
-			<span className="font-medium">
-				<a href={`https://openrouter.ai/${selectedModelId}`} className="text-vscode-link">
-					{t("kilocode:pricing.discoverModelPricing")}
-				</a>
-			</span>
-		),
 		(apiProvider === "gemini" || apiProvider === "gemini-fj") && (
 			<span className="italic">
 				{selectedModelId.includes("pro-preview")

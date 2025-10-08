@@ -397,7 +397,6 @@ const ApiOptions = ({
 				lmstudio: { field: "lmStudioModelId" },
 				// kilocode_change start
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModel },
-				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				// kilocode_change end
 			}
 
@@ -688,10 +687,6 @@ const ApiOptions = ({
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 				/>
-			)}
-
-			{selectedProvider === "gemini-cli" && (
-				<GeminiCli apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "virtual-quota-fallback" && (
