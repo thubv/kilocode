@@ -376,11 +376,6 @@ function getSelectedModel({
 				info: routerModels["kilocode-openrouter"][invalidOrDefaultModel],
 			}
 		}
-		case "gemini-cli": {
-			const id = apiConfiguration.apiModelId ?? geminiCliDefaultModelId
-			const info = geminiCliModels[id as keyof typeof geminiCliModels]
-			return { id, info }
-		}
 		case "virtual-quota-fallback": {
 			return {
 				id: apiConfiguration.apiModelId ?? anthropicDefaultModelId,

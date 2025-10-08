@@ -526,7 +526,6 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
-	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
