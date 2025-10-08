@@ -33,7 +33,6 @@ import {
 	LiteLLMHandler,
 	// kilocode_change start
 	VirtualQuotaFallbackHandler,
-	GeminiCliHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
@@ -135,8 +134,6 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "gemini":
 			return new GeminiHandler(options)
 		// kilocode_change start
-		case "gemini-cli":
-			return new GeminiCliHandler(options)
 		case "gemini-fj":
 			return new GeminiFjHandler(options)
 		// kilocode_change end
