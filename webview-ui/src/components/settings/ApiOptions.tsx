@@ -99,7 +99,6 @@ import {
 	VSCodeLM,
 	XAI,
 	// kilocode_change start
-	GeminiCli,
 	VirtualQuotaFallbackProvider,
 	Synthetic,
 	// kilocode_change end
